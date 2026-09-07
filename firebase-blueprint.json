@@ -1,0 +1,237 @@
+{
+  "entities": {
+    "Property": {
+      "title": "Property",
+      "description": "Anúncio de imóvel publicado pela Aliança Imobiliária.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "code": { "type": "string", "maxLength": 50 },
+        "dealType": { "type": "string", "enum": ["venda", "arrendamento", "trespasse"] },
+        "category": { "type": "string", "maxLength": 80 },
+        "categoryName": { "type": "string", "maxLength": 100 },
+        "price": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "isNegotiable": { "type": "boolean" },
+        "province": { "type": "string", "maxLength": 100 },
+        "municipality": { "type": "string", "maxLength": 100 },
+        "neighborhood": { "type": "string", "maxLength": 100 },
+        "addressReference": { "type": "string", "maxLength": 250 },
+        "area": { "type": "number" },
+        "bedrooms": { "type": "number" },
+        "bathrooms": { "type": "number" },
+        "parkingSpaces": { "type": "number" },
+        "features": { "type": "array" },
+        "description": { "type": "string", "maxLength": 5000 },
+        "condition": { "type": "string", "enum": ["novo", "usado", "em_construcao", "remodelado"] },
+        "status": { "type": "string", "enum": ["disponivel", "reservado", "vendido", "arrendado"] },
+        "isFeatured": { "type": "boolean" },
+        "images": { "type": "array" },
+        "videoUrl": { "type": "string", "maxLength": 500 },
+        "hasVideo": { "type": "boolean" },
+        "viewsCount": { "type": "number" },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 },
+        "publishedBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "title", "dealType", "category", "price", "province", "municipality", "status"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Categoria de imóveis ou serviços configurável pelo ADM.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "slug": { "type": "string", "maxLength": 100 },
+        "type": { "type": "string", "enum": ["residential", "commercial", "land", "service"] },
+        "icon": { "type": "string", "maxLength": 50 },
+        "order": { "type": "number" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name", "slug", "isActive"]
+    },
+    "Location": {
+      "title": "Location",
+      "description": "Configuração de províncias e municípios de Angola.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "province": { "type": "string", "maxLength": 100 },
+        "municipalities": { "type": "array" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "province"]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Configurações institucionais, letreiro e banners do site.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "heroTitle": { "type": "string", "maxLength": 300 },
+        "heroSubtitle": { "type": "string", "maxLength": 500 },
+        "heroBannerImage": { "type": "string", "maxLength": 500000 },
+        "marqueeNotice": { "type": "string", "maxLength": 500 },
+        "showMarquee": { "type": "boolean" },
+        "aboutStory": { "type": "string", "maxLength": 5000 },
+        "aboutMission": { "type": "string", "maxLength": 2000 },
+        "aboutVision": { "type": "string", "maxLength": 2000 },
+        "aboutValues": { "type": "array" },
+        "phone": { "type": "string", "maxLength": 50 },
+        "whatsapp": { "type": "string", "maxLength": 50 },
+        "email": { "type": "string", "maxLength": 150 },
+        "address": { "type": "string", "maxLength": 300 },
+        "workingHours": { "type": "string", "maxLength": 150 },
+        "logoUrl": { "type": "string", "maxLength": 500000 },
+        "profilePhotoUrl": { "type": "string", "maxLength": 500000 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Canal de atendimento privado entre cliente e imobiliária.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "visitorId": { "type": "string", "maxLength": 128 },
+        "clientName": { "type": "string", "maxLength": 150 },
+        "clientPhone": { "type": "string", "maxLength": 50 },
+        "lastMessage": { "type": "string", "maxLength": 1000 },
+        "lastMessageAt": { "type": "string", "maxLength": 64 },
+        "unreadByAdmin": { "type": "number" },
+        "unreadByUser": { "type": "number" },
+        "propertyInterestId": { "type": "string", "maxLength": 128 },
+        "propertyTitle": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "visitorId", "clientName"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Mensagem individual em tempo real.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "conversationId": { "type": "string", "maxLength": 128 },
+        "sender": { "type": "string", "enum": ["user", "admin"] },
+        "senderName": { "type": "string", "maxLength": 150 },
+        "text": { "type": "string", "maxLength": 2000 },
+        "timestamp": { "type": "string", "maxLength": 64 },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "conversationId", "sender", "text"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "Imóvel marcado como favorito pelo utilizador.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "propertyId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "propertyId"]
+    },
+    "PropertyAlert": {
+      "title": "PropertyAlert",
+      "description": "Alerta personalizado de critérios de pesquisa de imóveis configurado pelo utilizador.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "dealType": { "type": "string", "maxLength": 50 },
+        "category": { "type": "string", "maxLength": 80 },
+        "categoryName": { "type": "string", "maxLength": 100 },
+        "province": { "type": "string", "maxLength": 100 },
+        "municipality": { "type": "string", "maxLength": 100 },
+        "bedrooms": { "type": "string", "maxLength": 20 },
+        "minPrice": { "type": "number" },
+        "maxPrice": { "type": "number" },
+        "keyword": { "type": "string", "maxLength": 150 },
+        "notifyChannel": { "type": "string", "enum": ["app", "whatsapp", "email"] },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "lastNotifiedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "name", "active"]
+    },
+    "AlertNotification": {
+      "title": "AlertNotification",
+      "description": "Notificação em tempo real de novo imóvel correspondente a um alerta do utilizador.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "alertId": { "type": "string", "maxLength": 128 },
+        "alertName": { "type": "string", "maxLength": 150 },
+        "propertyId": { "type": "string", "maxLength": 128 },
+        "propertyTitle": { "type": "string", "maxLength": 200 },
+        "propertyCode": { "type": "string", "maxLength": 50 },
+        "propertyPrice": { "type": "number" },
+        "propertyImage": { "type": "string", "maxLength": 500000 },
+        "dealType": { "type": "string", "maxLength": 50 },
+        "location": { "type": "string", "maxLength": 150 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "alertId", "propertyId", "propertyTitle", "read"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Registo de utilizador com privilégios administrativos.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["admin"] }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/properties/{propertyId}": {
+      "schema": "Property",
+      "description": "Catálogo de imóveis e anúncios publicados pela imobiliária."
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Categorias de imóveis e serviços gerenciadas pelo ADM."
+    },
+    "/locations/{locationId}": {
+      "schema": "Location",
+      "description": "Províncias e municípios atendidos em Angola."
+    },
+    "/site_settings/{settingId}": {
+      "schema": "SiteSettings",
+      "description": "Definições visuais, banners, letreiro, sobre nós e contactos institucionais."
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Conversas privadas de suporte ao cliente."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Mensagens de texto trocadas na conversa em tempo real."
+    },
+    "/favorites/{favoriteId}": {
+      "schema": "Favorite",
+      "description": "Imóveis salvos como favoritos pelo utilizador."
+    },
+    "/alerts/{alertId}": {
+      "schema": "PropertyAlert",
+      "description": "Alertas personalizados de novos imóveis configurados pelos utilizadores."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "AlertNotification",
+      "description": "Notificações em tempo real geradas a partir dos alertas de imóveis."
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Registo de administradores autorizados."
+    }
+  }
+}

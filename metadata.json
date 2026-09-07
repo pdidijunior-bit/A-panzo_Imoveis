@@ -1,0 +1,6 @@
+{
+  "name": "Aliança Imobiliária",
+  "description": "Portal imobiliário profissional para compra, venda e arrendamento de imóveis em Luanda, Malanje e províncias de Angola.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

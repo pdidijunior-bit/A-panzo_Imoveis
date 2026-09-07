@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Teste de conectividade do sistema
+    match /test/connection {
+      allow read, write: if true;
+    }
+
+    // Catálogo de Imóveis (Leitura pública, Gestão administrativa)
+    match /properties/{propertyId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Categorias de Imóveis (Apartamento, Moradia, Terreno, Comercial, etc.)
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Localizações e Províncias (Luanda, Malanje e respetivos municípios)
+    match /locations/{locationId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Configurações do Portal (Contactos, WhatsApp, Telefones, Missão, Banners)
+    match /site_settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Sistema de Atendimento e Chat em Tempo Real
+    match /conversations/{conversationId} {
+      allow read, write: if true;
+
+      // Mensagens da conversa
+      match /messages/{messageId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Imóveis Favoritos dos Utilizadores
+    match /favorites/{favoriteId} {
+      allow read, write: if true;
+    }
+
+    // Alertas de Pesquisa Personalizados
+    match /alerts/{alertId} {
+      allow read, write: if true;
+    }
+
+    // Notificações em Tempo Real de Imóveis Correspondentes
+    match /notifications/{notificationId} {
+      allow read, write: if true;
+    }
+
+    // Coleção de Administradores Registados
+    match /admins/{adminId} {
+      allow read, write: if true;
+    }
+  }
+}
