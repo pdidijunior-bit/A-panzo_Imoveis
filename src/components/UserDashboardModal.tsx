@@ -38,7 +38,7 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
   catalogProperties,
   categories,
   locations,
-  whatsappNumber = '+244935973494',
+  whatsappNumber = '+244 924 875 869',
   onSelectProperty,
   onApplyAlertFilter,
 }) => {
@@ -727,7 +727,7 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
                   </a>
 
                   <a
-                    href="tel:+244935973494"
+                    href="tel:+244924875869"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white font-bold text-xs shadow-md transition-all"
                   >
                     Ligar para Escritório

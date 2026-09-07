@@ -40,7 +40,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({ type, onClose }) => {
                 <strong>3. Segurança nas Transações:</strong> Toda transação formal de compra, venda ou arrendamento é acompanhada por consultores credenciados e obedece rigorosamente à legislação angolana.
               </p>
               <p>
-                <strong>4. Contacto Oficial:</strong> Para esclarecimento de termos ou agendamento de consultas jurídicas, contacte diretamente o WhatsApp +244 935973494.
+                <strong>4. Contacto Oficial:</strong> Para esclarecimento de termos ou agendamento de consultas jurídicas, contacte diretamente o WhatsApp +244 924 875 869.
               </p>
             </>
           ) : (

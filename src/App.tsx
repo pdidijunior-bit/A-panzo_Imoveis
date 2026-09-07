@@ -208,7 +208,7 @@ function MainApp() {
     }
   };
 
-  const cleanWhatsapp = (settings.whatsapp || '+244935973494').replace(/[^0-9]/g, '');
+  const cleanWhatsapp = (settings.whatsapp || '+244924875869').replace(/[^0-9]/g, '');
 
   return (
     <FavoritesAndAlertsProvider catalogProperties={properties}>

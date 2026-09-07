@@ -41,6 +41,36 @@ export function cleanFirestoreData<T extends Record<string, any>>(data: T): Reco
   return clean;
 }
 
+function normalizeSiteSettings(data: any): SiteSettings {
+  const merged: SiteSettings = { ...DEFAULT_SITE_SETTINGS, ...data };
+  let migrated = false;
+  if (merged.phone && merged.phone.includes('935973494')) {
+    merged.phone = '+244 924 875 869';
+    migrated = true;
+  }
+  if (merged.whatsapp && merged.whatsapp.includes('935973494')) {
+    merged.whatsapp = '+244 924 875 869';
+    migrated = true;
+  }
+  if (merged.marqueeNotice && merged.marqueeNotice.includes('935973494')) {
+    merged.marqueeNotice = merged.marqueeNotice.replace(/(\+?244\s*)?935\s*973\s*494/g, '+244 924 875 869');
+    migrated = true;
+  }
+  if (migrated) {
+    setDoc(
+      doc(db, 'site_settings', 'general'),
+      cleanFirestoreData({
+        phone: merged.phone,
+        whatsapp: merged.whatsapp,
+        marqueeNotice: merged.marqueeNotice,
+        updatedAt: new Date().toISOString(),
+      }),
+      { merge: true }
+    ).catch(() => {});
+  }
+  return merged;
+}
+
 export const dbService = {
   // --- PROPERTIES ---
   subscribeProperties(
@@ -210,7 +240,7 @@ export const dbService = {
     try {
       const snap = await getDoc(doc(db, 'site_settings', 'general'));
       if (snap.exists()) {
-        return { ...DEFAULT_SITE_SETTINGS, ...snap.data() } as SiteSettings;
+        return normalizeSiteSettings(snap.data());
       }
       return DEFAULT_SITE_SETTINGS;
     } catch {
@@ -227,7 +257,7 @@ export const dbService = {
       doc(db, 'site_settings', 'general'),
       (snapshot) => {
         if (snapshot.exists()) {
-          callback({ ...DEFAULT_SITE_SETTINGS, ...snapshot.data() } as SiteSettings);
+          callback(normalizeSiteSettings(snapshot.data()));
         } else {
           callback(DEFAULT_SITE_SETTINGS);
         }

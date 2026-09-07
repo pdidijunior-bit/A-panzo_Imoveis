@@ -141,8 +141,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [storyInput, setStoryInput] = useState(siteSettings.aboutStory || '');
   const [missionInput, setMissionInput] = useState(siteSettings.aboutMission || '');
   const [visionInput, setVisionInput] = useState(siteSettings.aboutVision || '');
-  const [phoneInput, setPhoneInput] = useState(siteSettings.phone || '+244 935973494');
-  const [whatsappInput, setWhatsappInput] = useState(siteSettings.whatsapp || '+244 935973494');
+  const [phoneInput, setPhoneInput] = useState(siteSettings.phone || '+244 924 875 869');
+  const [whatsappInput, setWhatsappInput] = useState(siteSettings.whatsapp || '+244 924 875 869');
   const [emailInput, setEmailInput] = useState(siteSettings.email || 'contacto@aliancaimobiliaria.ao');
   const [addressInput, setAddressInput] = useState(siteSettings.address || 'Luanda & Malanje, Angola');
   const [hoursInput, setHoursInput] = useState(siteSettings.workingHours || 'Segunda a Sábado: 08:00 - 18:00');
@@ -1159,7 +1159,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   type="text"
                   value={marqueeInput}
                   onChange={(e) => setMarqueeInput(e.target.value)}
-                  placeholder="Ex: Novas oportunidades em Luanda e Malanje • Contacte WhatsApp: +244 935973494"
+                  placeholder="Ex: Novas oportunidades em Luanda e Malanje • Contacte WhatsApp: +244 924 875 869"
                   className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
                 />
               </div>
