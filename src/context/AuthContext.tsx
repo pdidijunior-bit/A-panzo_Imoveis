@@ -31,9 +31,9 @@ const AuthContext = createContext<AuthContextType>({
 
 // Admin email configured securely at runtime
 const PRIMARY_ADMIN_EMAIL = 'anoterlove132@gmail.com';
-export const DEFAULT_MASTER_KEY = 'alianca2026';
-const MASTER_KEY_STORAGE = 'alianca_custom_master_key';
-const MASTER_SESSION_STORAGE = 'alianca_master_admin_session';
+export const DEFAULT_MASTER_KEY = 'apanzo2026';
+const MASTER_KEY_STORAGE = 'apanzo_custom_master_key';
+const MASTER_SESSION_STORAGE = 'apanzo_master_admin_session';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -96,8 +96,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
 
-    const customKey = localStorage.getItem(MASTER_KEY_STORAGE);
-    const validKeys = [DEFAULT_MASTER_KEY, 'alianca@admin'];
+    const customKey = localStorage.getItem(MASTER_KEY_STORAGE) || localStorage.getItem('alianca_custom_master_key');
+    const validKeys = [DEFAULT_MASTER_KEY, 'apanzo2026', 'apanzo@admin', 'alianca2026', 'alianca@admin'];
     if (customKey) {
       validKeys.push(customKey);
     }

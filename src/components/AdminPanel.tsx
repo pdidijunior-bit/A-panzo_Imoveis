@@ -205,7 +205,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const resetPropertyForm = () => {
     setEditingPropertyId(null);
     setPropTitle('');
-    setPropCode(`ALI-${Math.floor(100 + Math.random() * 900)}`);
+    setPropCode(`APZ-${Math.floor(100 + Math.random() * 900)}`);
     setPropDealType('venda');
     setPropCategory(categories[0]?.slug || 'casas-t3');
     setPropPrice('');
