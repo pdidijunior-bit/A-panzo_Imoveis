@@ -44,25 +44,64 @@ export function cleanFirestoreData<T extends Record<string, any>>(data: T): Reco
 function normalizeSiteSettings(data: any): SiteSettings {
   const merged: SiteSettings = { ...DEFAULT_SITE_SETTINGS, ...data };
   let migrated = false;
-  if (merged.phone && merged.phone.includes('935973494')) {
-    merged.phone = '+244 924 875 869';
+  // If settings still contain old legacy contact info or default titles
+  if (!merged.phone || merged.phone.includes('935973494') || merged.phone.includes('924875869') || merged.phone.includes('924 875 869')) {
+    merged.phone = '+244 925 883 080';
     migrated = true;
   }
-  if (merged.whatsapp && merged.whatsapp.includes('935973494')) {
-    merged.whatsapp = '+244 924 875 869';
+  if (!merged.whatsapp || merged.whatsapp.includes('935973494') || merged.whatsapp.includes('924875869') || merged.whatsapp.includes('924 875 869')) {
+    merged.whatsapp = '+244 925 883 080';
     migrated = true;
   }
-  if (merged.marqueeNotice && merged.marqueeNotice.includes('935973494')) {
-    merged.marqueeNotice = merged.marqueeNotice.replace(/(\+?244\s*)?935\s*973\s*494/g, '+244 924 875 869');
+  if (!merged.phone2) {
+    merged.phone2 = '+244 928 771 808';
+    migrated = true;
+  }
+  if (!merged.phone3) {
+    merged.phone3 = '+244 952 644 332';
+    migrated = true;
+  }
+  if (!merged.email || merged.email.includes('aliancaimobiliaria.ao')) {
+    merged.email = 'comercial@anpanzo.com';
+    migrated = true;
+  }
+  if (!merged.email2) {
+    merged.email2 = 'ap.imobiliaria1985@gmail.com';
+    migrated = true;
+  }
+  if (!merged.website) {
+    merged.website = 'anpanzo.com';
+    migrated = true;
+  }
+  if (!merged.instagram) {
+    merged.instagram = '@A.panzo comercial';
+    migrated = true;
+  }
+  if (!merged.facebook) {
+    merged.facebook = 'A.panzo comercial';
+    migrated = true;
+  }
+  if (!merged.address || merged.address.includes('Luanda & Malanje, Angola')) {
+    merged.address = 'Angola – Serviço com Qualidade e Confiança';
+    migrated = true;
+  }
+  if (!merged.heroTitle || merged.heroTitle.includes('Aliança Imobiliária')) {
+    merged.heroTitle = 'Quer Vender, Comprar ou Arrendar? Nós Temos a Solução Ideal para Si!';
+    migrated = true;
+  }
+  if (!merged.heroSubtitle || merged.heroSubtitle.includes('Aliança Imobiliária')) {
+    merged.heroSubtitle = 'A.PANZO - Comércio & Prestação de Serviços, LDA. Cuidamos do seu imóvel como se fosse nosso com qualidade e confiança.';
+    migrated = true;
+  }
+  if (!merged.marqueeNotice || merged.marqueeNotice.includes('Aliança') || merged.marqueeNotice.includes('924 875 869') || merged.marqueeNotice.includes('935973494')) {
+    merged.marqueeNotice = 'A.PANZO Imobiliária • Apartamentos, Vivendas, Lojas, Armazéns, Escritórios e Terrenos • WhatsApp: +244 925 883 080';
     migrated = true;
   }
   if (migrated) {
     setDoc(
       doc(db, 'site_settings', 'general'),
       cleanFirestoreData({
-        phone: merged.phone,
-        whatsapp: merged.whatsapp,
-        marqueeNotice: merged.marqueeNotice,
+        ...merged,
         updatedAt: new Date().toISOString(),
       }),
       { merge: true }

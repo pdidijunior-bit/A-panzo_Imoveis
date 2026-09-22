@@ -66,8 +66,14 @@ export interface SiteSettings {
   aboutValues: string[];
   servicesList: { title: string; description: string; icon: string }[];
   phone: string;
+  phone2?: string;
+  phone3?: string;
   whatsapp: string;
   email: string;
+  email2?: string;
+  website?: string;
+  instagram?: string;
+  facebook?: string;
   address: string;
   workingHours: string;
   logoUrl?: string;

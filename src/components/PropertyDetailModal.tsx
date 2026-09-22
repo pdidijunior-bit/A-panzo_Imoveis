@@ -60,7 +60,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
   const cleanWhatsapp = agencyWhatsapp.replace(/[^0-9]/g, '');
 
   const whatsappMessage = encodeURIComponent(
-    `Olá Aliança Imobiliária! Tenho interesse no imóvel "${property.title}" (Cód: ${property.code || property.id.slice(0, 6).toUpperCase()}) em ${property.municipality}, ${property.province}. Preço: ${formatKz(property.price)}${property.dealType === 'arrendamento' ? '/mês' : ''}. Desejo mais informações e agendamento de visita.`
+    `Olá A.PANZO Imobiliária! Tenho interesse no imóvel "${property.title}" (Cód: ${property.code || property.id.slice(0, 6).toUpperCase()}) em ${property.municipality}, ${property.province}. Preço: ${formatKz(property.price)}${property.dealType === 'arrendamento' ? '/mês' : ''}. Desejo mais informações e agendamento de visita.`
   );
 
   const images = property.images && property.images.length > 0
@@ -355,20 +355,20 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
           )}
 
           {/* Legal Security Guarantee Badge */}
-          <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 text-[#0052A5] shrink-0 mt-0.5" />
             <div>
-              <h5 className="text-xs font-bold text-amber-950 uppercase">Garantia Aliança Imobiliária</h5>
-              <p className="text-xs text-amber-800/90 mt-0.5">
-                Todos os imóveis mediados pela nossa agência contam com verificação jurídica prévia, apoio na formalização de contratos e acompanhamento presencial em todas as fases.
+              <h5 className="text-xs font-bold text-[#003366] uppercase">Garantia A.PANZO Imobiliária</h5>
+              <p className="text-xs text-slate-700 mt-0.5">
+                Cuidamos do seu imóvel como se fosse nosso. Todos os imóveis mediados contam com verificação jurídica prévia, apoio na formalização contratual e acompanhamento presencial em todas as fases.
               </p>
             </div>
           </div>
 
           {/* Create Alert for Similar Properties */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold shrink-0 shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-[#0052A5] text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
                 <Bell className="w-5 h-5" />
               </div>
               <div>
@@ -399,10 +399,10 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                   maxPrice: Math.round(property.price * 1.15),
                 });
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold text-xs shrink-0 shadow-sm transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0052A5] hover:bg-[#003366] text-white font-bold text-xs shrink-0 shadow-sm transition-all"
             >
-              <Bell className="w-3.5 h-3.5 text-amber-400" />
-              Criar Alerta deste Perfil
+              <Bell className="w-3.5 h-3.5 text-blue-200" />
+              <span>Criar Alerta</span>
             </button>
           </div>
         </div>
@@ -410,29 +410,30 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
         {/* Sticky Action Footer */}
         <div className="p-4 sm:p-5 bg-slate-900 text-white border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 sticky bottom-0 z-20">
           <div className="hidden sm:block">
-            <p className="text-xs text-slate-400">Interessado neste imóvel?</p>
-            <p className="text-sm font-bold text-amber-300">Entre em contacto com os nossos consultores</p>
+            <p className="text-xs text-slate-400">Interessado neste imóvel? Telefone: <span className="font-mono text-white">{agencyPhone}</span></p>
+            <p className="text-sm font-bold text-blue-300">Entre em contacto com os nossos consultores</p>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {/* WhatsApp Button */}
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            {/* WhatsApp Button - Clean Essential Label */}
             <a
               href={`https://wa.me/${cleanWhatsapp}?text=${whatsappMessage}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-xl transition-all shadow-md"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs uppercase tracking-wider py-3 px-5 rounded-xl transition-all shadow-md"
             >
               <MessageCircle className="w-4 h-4" />
-              <span>WhatsApp Directo</span>
+              <span>Fale Connosco</span>
             </a>
 
-            {/* Normal Phone Call */}
+            {/* Normal Phone Call - Clean Essential Label */}
             <a
               href={`tel:${agencyPhone}`}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-100 active:scale-95 text-slate-950 font-bold text-xs py-3 px-4 rounded-xl transition-all shadow-md"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-[#0052A5] hover:bg-[#003366] active:scale-95 text-white font-bold text-xs py-3 px-5 rounded-xl transition-all shadow-md"
+              title={`Ligar para ${agencyPhone}`}
             >
-              <Phone className="w-4 h-4 text-amber-600" />
-              <span>Ligar: {agencyPhone}</span>
+              <Phone className="w-4 h-4 text-white" />
+              <span>Ligar Agora</span>
             </a>
 
             {/* Real-Time Site Chat Button */}
@@ -441,11 +442,11 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                 onClose();
                 onOpenLiveChatWithProperty(property);
               }}
-              className="inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-extrabold text-xs py-3 px-3.5 rounded-xl transition-all shadow-md"
-              title="Falar no chat em tempo real"
+              className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-xs py-3 px-4 rounded-xl transition-all border border-white/20 shadow-sm"
+              title="Apoio e Atendimento no Site"
             >
-              <Headphones className="w-4 h-4" />
-              <span className="hidden md:inline">Chat no Site</span>
+              <Headphones className="w-4 h-4 text-blue-300" />
+              <span className="hidden md:inline">Apoio</span>
             </button>
           </div>
         </div>

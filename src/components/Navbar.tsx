@@ -1,80 +1,102 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState, useEffect } from 'react';
 import {
   Menu,
   X,
   Phone,
   MessageCircle,
-  Headphones,
-  Info,
-  Shield,
   Home,
   Tag,
   Building,
-  Briefcase,
-  ChevronRight,
-  ExternalLink,
+  Info,
+  Shield,
   Heart,
   Bell,
+  Headphones,
   User as UserIcon,
+  ChevronRight,
+  Briefcase,
 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
-import { useAuth } from '../context/AuthContext';
-import { useFavoritesAndAlerts } from '../context/FavoritesAndAlertsContext';
 import { NotificationDropdown } from './NotificationDropdown';
 import { Property } from '../types';
+import { AnimatePresence, motion } from 'motion/react';
+import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
-  logoUrl?: string;
+  onOpenAdmin: () => void;
+  isAdmin: boolean;
+  onNavigateHome: () => void;
+  activeView: 'home' | 'admin';
   phone: string;
   whatsapp: string;
-  catalogProperties?: Property[];
+  logoUrl?: string;
   onOpenAbout: () => void;
   onOpenChat: () => void;
-  onOpenAdmin: () => void;
-  onSelectCategory?: (slug: string) => void;
+  onSelectCategory?: (categoryId: string) => void;
   onSelectDealType?: (dealType: 'venda' | 'arrendamento') => void;
-  activeView: 'home' | 'admin';
-  onNavigateHome: () => void;
+  favoriteCount?: number;
+  onOpenUserDashboard?: (initialTab?: 'favorites' | 'alerts' | 'profile') => void;
+  catalogProperties?: Property[];
   onSelectProperty?: (property: Property) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  logoUrl,
+  onOpenAdmin,
+  isAdmin,
+  onNavigateHome,
+  activeView,
   phone,
   whatsapp,
-  catalogProperties = [],
+  logoUrl,
   onOpenAbout,
   onOpenChat,
-  onOpenAdmin,
   onSelectCategory,
   onSelectDealType,
-  activeView,
-  onNavigateHome,
+  favoriteCount = 0,
+  onOpenUserDashboard,
+  catalogProperties = [],
   onSelectProperty,
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const { currentUser, isAdmin } = useAuth();
-  const { favoriteCount, unreadCount, openUserDashboard } = useFavoritesAndAlerts();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { currentUser } = useAuth();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 15);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const cleanWhatsapp = whatsapp.replace(/[^0-9]/g, '');
 
-  const closeMenu = () => setMobileMenuOpen(false);
+  const closeMenu = () => setIsMenuOpen(false);
+
+  const openUserDashboard = (tab?: 'favorites' | 'alerts' | 'profile') => {
+    if (onOpenUserDashboard) {
+      onOpenUserDashboard(tab);
+    }
+  };
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all shadow-xs">
+      <header
+        className={`sticky top-0 z-40 transition-all duration-200 ${
+          isScrolled
+            ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200'
+            : 'bg-white border-b border-slate-100'
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            {/* Logo */}
+            {/* Logo / Brand */}
             <button
-              onClick={() => {
-                onNavigateHome();
-                closeMenu();
-              }}
-              className="focus:outline-hidden focus:ring-2 focus:ring-amber-500 rounded-lg p-1 text-left"
-              title="Aliança Imobiliária Página Inicial"
+              onClick={onNavigateHome}
+              className="text-left focus:outline-hidden group"
+              aria-label="A.PANZO Imobiliária - Início"
             >
               <BrandLogo customLogoUrl={logoUrl} size="md" />
             </button>
@@ -82,14 +104,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Desktop Navigation Links */}
             <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-700">
               <button
-                onClick={() => {
-                  onNavigateHome();
-                }}
-                className={`transition-colors hover:text-amber-600 flex items-center gap-1.5 ${
-                  activeView === 'home' ? 'text-amber-600' : ''
+                onClick={() => onNavigateHome()}
+                className={`transition-colors hover:text-[#0052A5] flex items-center gap-1.5 ${
+                  activeView === 'home' ? 'text-[#0052A5]' : ''
                 }`}
               >
-                <Home className="w-4 h-4 text-amber-500" />
+                <Home className="w-4 h-4 text-[#0052A5]" />
                 Início
               </button>
 
@@ -98,7 +118,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onNavigateHome();
                   if (onSelectDealType) onSelectDealType('venda');
                 }}
-                className="transition-colors hover:text-amber-600 flex items-center gap-1"
+                className="transition-colors hover:text-[#0052A5] flex items-center gap-1"
               >
                 Comprar
               </button>
@@ -108,7 +128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onNavigateHome();
                   if (onSelectDealType) onSelectDealType('arrendamento');
                 }}
-                className="transition-colors hover:text-amber-600 flex items-center gap-1"
+                className="transition-colors hover:text-[#0052A5] flex items-center gap-1"
               >
                 Arrendar
               </button>
@@ -118,7 +138,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onNavigateHome();
                   if (onSelectCategory) onSelectCategory('cat-terrenos');
                 }}
-                className="transition-colors hover:text-amber-600"
+                className="transition-colors hover:text-[#0052A5]"
               >
                 Terrenos
               </button>
@@ -128,59 +148,59 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onNavigateHome();
                   if (onSelectCategory) onSelectCategory('cat-espacos-comerciais');
                 }}
-                className="transition-colors hover:text-amber-600"
+                className="transition-colors hover:text-[#0052A5]"
               >
                 Comercial
               </button>
 
               <button
                 onClick={onOpenAbout}
-                className="transition-colors hover:text-amber-600 flex items-center gap-1.5"
+                className="transition-colors hover:text-[#0052A5] flex items-center gap-1.5"
               >
                 <Info className="w-4 h-4 text-slate-400" />
                 Sobre Nós
               </button>
             </nav>
 
-            {/* Direct Contact Buttons (Desktop) */}
+            {/* Direct Contact Buttons (Desktop) - Clean, essential labels with proper padding */}
             <div className="hidden sm:flex items-center gap-3">
               {/* WhatsApp Direct */}
               <a
-                href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá Aliança Imobiliária! Gostaria de consultar informações sobre os imóveis disponíveis.')}`}
+                href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá A.PANZO Imobiliária! Gostaria de consultar informações sobre os imóveis disponíveis.')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs uppercase tracking-wider px-3.5 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md"
-                title="Conversar diretamente via WhatsApp"
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md"
+                title="Fale Connosco no WhatsApp"
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>WhatsApp</span>
+                <span>Fale Connosco</span>
               </a>
 
               {/* Normal Phone Call */}
               <a
                 href={`tel:${phone}`}
-                className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 active:scale-95 text-amber-300 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-sm"
-                title="Ligue diretamente para a nossa equipa"
+                className="inline-flex items-center gap-2 bg-[#0052A5] hover:bg-[#003366] active:scale-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm"
+                title={`Ligar para ${phone}`}
               >
-                <Phone className="w-4 h-4 text-amber-400" />
-                <span className="font-mono">{phone}</span>
+                <Phone className="w-4 h-4 text-white" />
+                <span>Ligar Agora</span>
               </a>
 
               {/* Real-Time Chat Assistant Trigger */}
               <button
                 onClick={onOpenChat}
-                className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs px-3 py-2.5 rounded-xl transition-all shadow-sm"
-                title="Apoio em tempo real"
+                className="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-[#0052A5] font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition-all border border-blue-200"
+                title="Apoio e Atendimento ao Cliente"
               >
-                <Headphones className="w-4 h-4" />
-                <span className="hidden xl:inline">Assistência</span>
+                <Headphones className="w-4 h-4 text-[#0052A5]" />
+                <span className="hidden xl:inline">Apoio</span>
               </button>
 
               {/* Favorites Button (Desktop) */}
               <button
                 id="navbar-favorites-btn"
                 onClick={() => openUserDashboard('favorites')}
-                className="relative p-2.5 rounded-xl border border-slate-200 hover:border-amber-300 hover:bg-amber-50/50 text-slate-700 transition-all flex items-center gap-1.5"
+                className="relative p-2.5 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-slate-700 transition-all flex items-center gap-1.5"
                 title="Meus Favoritos"
               >
                 <Heart
@@ -202,12 +222,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
                   className={`relative p-2.5 rounded-xl border transition-all flex items-center gap-1.5 ${
                     notificationsOpen
-                      ? 'bg-amber-100 border-amber-400 text-slate-950 shadow-xs'
-                      : 'border-slate-200 hover:border-amber-300 hover:bg-amber-50/50 text-slate-700'
+                      ? 'bg-blue-50 border-blue-400 text-slate-950 shadow-xs'
+                      : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-slate-700'
                   }`}
-                  title="Notificações e Alertas em Tempo Real"
+                  title="Notificações e Oportunidades"
                 >
-                  <Bell className="w-4 h-4 text-amber-500" />
+                  <Bell className="w-4 h-4 text-[#0052A5]" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold animate-pulse">
                       {unreadCount}
@@ -229,12 +249,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 id="navbar-user-dashboard-btn"
                 onClick={() => openUserDashboard('profile')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-800 text-xs font-bold transition-all border border-slate-200"
-                title="Área do Cliente: Favoritos, Alertas e Perfil"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all border border-slate-200"
+                title="Área do Cliente"
               >
-                <UserIcon className="w-3.5 h-3.5 text-amber-600" />
+                <UserIcon className="w-3.5 h-3.5 text-[#0052A5]" />
                 <span className="hidden xl:inline">
-                  {currentUser ? currentUser.displayName?.split(' ')[0] || 'Conta' : 'Painel'}
+                  {currentUser ? currentUser.displayName?.split(' ')[0] || 'Conta' : 'Área do Cliente'}
                 </span>
               </button>
 
@@ -243,12 +263,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={onOpenAdmin}
                 className={`p-2.5 rounded-xl border transition-all text-xs font-semibold flex items-center gap-1.5 ${
                   isAdmin
-                    ? 'bg-amber-50 text-amber-800 border-amber-300 ring-1 ring-amber-400/50'
+                    ? 'bg-blue-50 text-[#0052A5] border-blue-300 ring-1 ring-blue-400/50'
                     : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                 }`}
                 title={isAdmin ? 'Painel Administrativo Ativo' : 'Acesso Administrativo'}
               >
-                <Shield className={`w-4 h-4 ${isAdmin ? 'text-amber-600' : 'text-slate-400'}`} />
+                <Shield className={`w-4 h-4 ${isAdmin ? 'text-[#0052A5]' : 'text-slate-400'}`} />
                 {isAdmin ? <span className="hidden md:inline font-bold">ADM</span> : null}
               </button>
             </div>
@@ -267,63 +287,48 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }`}
                 />
                 {favoriteCount > 0 && (
-                  <span className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-extrabold">
+                  <span className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-bold">
                     {favoriteCount}
                   </span>
                 )}
               </button>
 
-              {/* Mobile Bell button */}
+              {/* Mobile Chat Trigger */}
               <button
-                onClick={() => openUserDashboard('notifications')}
-                className="relative p-2 text-slate-700 bg-slate-100 rounded-lg"
-                title="Notificações"
+                onClick={onOpenChat}
+                className="p-2 text-[#0052A5] bg-blue-50 rounded-lg"
+                title="Apoio"
               >
-                <Bell className="w-4 h-4 text-amber-500" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-extrabold">
-                    {unreadCount}
-                  </span>
-                )}
+                <Headphones className="w-4 h-4" />
               </button>
 
-              <a
-                href={`https://wa.me/${cleanWhatsapp}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-emerald-600 text-white rounded-lg"
-                title="WhatsApp"
-              >
-                <MessageCircle className="w-4 h-4" />
-              </a>
-
+              {/* Mobile Menu Toggle Button */}
               <button
-                onClick={() => setMobileMenuOpen(true)}
-                className="p-2 rounded-xl text-slate-800 bg-slate-100 hover:bg-slate-200 focus:outline-hidden"
-                aria-label="Abrir menu de navegação"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 rounded-lg text-slate-700 hover:bg-slate-100 focus:outline-hidden"
+                aria-label="Abrir menu"
               >
-                <Menu className="w-5 h-5" />
+                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Modern Sliding Menu (Drawer) for Mobile & Tablet */}
+      {/* Mobile Slide-Over Drawer */}
       <AnimatePresence>
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 z-50 flex justify-end">
+        {isMenuOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden flex justify-end">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
               onClick={closeMenu}
               className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs"
             />
 
-            {/* Drawer Content */}
+            {/* Drawer Container */}
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
@@ -343,28 +348,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </div>
 
-              {/* Drawer Quick Action Banner */}
-              <div className="p-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 flex flex-col gap-2">
+              {/* Drawer Quick Action Banner with clean, direct buttons and good spacing */}
+              <div className="p-4 bg-gradient-to-r from-[#0052A5] to-[#003366] text-white flex flex-col gap-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider">Atendimento Rápido</span>
-                  <span className="text-[10px] bg-slate-950 text-amber-300 px-2 py-0.5 rounded-full font-bold">Angola</span>
+                  <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-bold">Angola</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-1">
+                {/* Clean Button Grid: Essential labels with balanced 10px 20px padding */}
+                <div className="grid grid-cols-2 gap-2.5 mt-1">
                   <a
-                    href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá Aliança Imobiliária! Gostaria de informações sobre os vossos imóveis.')}`}
+                    href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá A.PANZO Imobiliária! Gostaria de informações sobre os vossos imóveis.')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 bg-slate-950 text-white text-xs font-bold py-2.5 px-3 rounded-lg shadow-sm"
+                    className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all"
                   >
-                    <MessageCircle className="w-4 h-4 text-emerald-400" />
-                    WhatsApp
+                    <MessageCircle className="w-4 h-4" />
+                    <span>Fale Connosco</span>
                   </a>
                   <a
                     href={`tel:${phone}`}
-                    className="flex items-center justify-center gap-1.5 bg-white text-slate-950 text-xs font-bold py-2.5 px-3 rounded-lg shadow-sm"
+                    className="flex items-center justify-center gap-2 bg-white text-[#0052A5] hover:bg-slate-100 text-xs font-bold py-2.5 px-4 rounded-xl shadow-sm transition-all"
                   >
-                    <Phone className="w-4 h-4 text-amber-600" />
-                    Ligar
+                    <Phone className="w-4 h-4 text-[#0052A5]" />
+                    <span>Ligar Agora</span>
                   </a>
                 </div>
               </div>
@@ -394,10 +400,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     closeMenu();
                     openUserDashboard('alerts');
                   }}
-                  className="flex items-center justify-between w-full p-3 rounded-xl bg-amber-50/60 text-amber-900 hover:bg-amber-100/70 transition-colors"
+                  className="flex items-center justify-between w-full p-3 rounded-xl bg-blue-50/60 text-blue-900 hover:bg-blue-100/70 transition-colors"
                 >
                   <span className="flex items-center gap-3 font-semibold">
-                    <Bell className="w-4 h-4 text-amber-600" />
+                    <Bell className="w-4 h-4 text-[#0052A5]" />
                     Alertas & Notificações
                   </span>
                   {unreadCount > 0 ? (
@@ -405,7 +411,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       {unreadCount} novas
                     </span>
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-amber-300" />
+                    <ChevronRight className="w-4 h-4 text-blue-300" />
                   )}
                 </button>
 
@@ -418,10 +424,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onNavigateHome();
                     closeMenu();
                   }}
-                  className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                  className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-blue-50 hover:text-[#0052A5] transition-colors"
                 >
                   <span className="flex items-center gap-3">
-                    <Home className="w-4 h-4 text-amber-500" />
+                    <Home className="w-4 h-4 text-[#0052A5]" />
                     Início / Catálogo
                   </span>
                   <ChevronRight className="w-4 h-4 text-slate-300" />
@@ -433,10 +439,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     if (onSelectDealType) onSelectDealType('venda');
                     closeMenu();
                   }}
-                  className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                  className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-blue-50 hover:text-[#0052A5] transition-colors"
                 >
                   <span className="flex items-center gap-3">
-                    <Tag className="w-4 h-4 text-amber-500" />
+                    <Tag className="w-4 h-4 text-[#0052A5]" />
                     Imóveis para Venda
                   </span>
                   <ChevronRight className="w-4 h-4 text-slate-300" />
@@ -448,10 +454,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     if (onSelectDealType) onSelectDealType('arrendamento');
                     closeMenu();
                   }}
-                  className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                  className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-blue-50 hover:text-[#0052A5] transition-colors"
                 >
                   <span className="flex items-center gap-3">
-                    <Building className="w-4 h-4 text-amber-500" />
+                    <Building className="w-4 h-4 text-[#0052A5]" />
                     Imóveis para Arrendamento
                   </span>
                   <ChevronRight className="w-4 h-4 text-slate-300" />
@@ -463,10 +469,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     if (onSelectCategory) onSelectCategory('cat-terrenos');
                     closeMenu();
                   }}
-                  className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                  className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-blue-50 hover:text-[#0052A5] transition-colors"
                 >
                   <span className="flex items-center gap-3">
-                    <Briefcase className="w-4 h-4 text-amber-500" />
+                    <Briefcase className="w-4 h-4 text-[#0052A5]" />
                     Terrenos & Espaços Comerciais
                   </span>
                   <ChevronRight className="w-4 h-4 text-slate-300" />
@@ -477,10 +483,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     closeMenu();
                     onOpenAbout();
                   }}
-                  className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                  className="flex items-center justify-between w-full p-3 rounded-xl hover:bg-blue-50 hover:text-[#0052A5] transition-colors"
                 >
                   <span className="flex items-center gap-3">
-                    <Info className="w-4 h-4 text-amber-500" />
+                    <Info className="w-4 h-4 text-[#0052A5]" />
                     Sobre Nós
                   </span>
                   <ChevronRight className="w-4 h-4 text-slate-300" />
@@ -491,13 +497,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                     closeMenu();
                     onOpenChat();
                   }}
-                  className="flex items-center justify-between w-full p-3 rounded-xl bg-amber-50/60 text-amber-900 hover:bg-amber-100/70 transition-colors my-2"
+                  className="flex items-center justify-between w-full p-3 rounded-xl bg-blue-50 text-[#0052A5] hover:bg-blue-100 transition-colors my-2"
                 >
                   <span className="flex items-center gap-3 font-bold">
-                    <Headphones className="w-4 h-4 text-amber-600" />
-                    Assistência em Tempo Real
+                    <Headphones className="w-4 h-4 text-[#0052A5]" />
+                    Apoio ao Cliente em Tempo Real
                   </span>
-                  <span className="text-[10px] bg-amber-200 text-amber-900 font-bold px-2 py-0.5 rounded-full">Online</span>
+                  <span className="text-[10px] bg-blue-200 text-[#003366] font-bold px-2 py-0.5 rounded-full">Online</span>
                 </button>
               </div>
 
@@ -510,15 +516,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }}
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-200 text-slate-700 hover:bg-white text-xs font-bold transition-all shadow-xs"
                 >
-                  <Shield className="w-4 h-4 text-amber-600" />
-                  Painel de Administração (ADM)
+                  <Shield className="w-4 h-4 text-[#0052A5]" />
+                  Painel Administrativo (ADM)
                 </button>
 
                 <div className="text-center">
-                  <p className="text-[11px] text-slate-500">
-                    Aliança Imobiliária • Luanda & Malanje
+                  <p className="text-[11px] font-semibold text-slate-700">
+                    A.PANZO - Comércio & Prestação de Serviços, LDA
                   </p>
-                  <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                  <p className="text-[10px] font-mono text-slate-500 mt-0.5">
                     WhatsApp: {whatsapp}
                   </p>
                 </div>

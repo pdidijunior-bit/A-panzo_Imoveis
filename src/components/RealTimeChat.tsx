@@ -101,7 +101,7 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
 
     const welcomeText = attachedProperty
       ? `Olá! Tenho interesse no imóvel "${attachedProperty.title}" (Cód: ${attachedProperty.code || attachedProperty.id.slice(0, 6).toUpperCase()}).`
-      : 'Olá! Gostaria de falar com um consultor da Aliança Imobiliária.';
+      : 'Olá! Gostaria de falar com um consultor da A.PANZO Imobiliária.';
 
     dbService.sendClientMessage(
       visitorId,
@@ -231,7 +231,7 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm mt-2"
+              className="w-full py-2.5 bg-[#0052A5] hover:bg-[#003366] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm mt-2"
             >
               Iniciar Conversa
             </button>
@@ -245,7 +245,7 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
               className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-bold hover:underline"
             >
               <MessageCircle className="w-3.5 h-3.5" />
-              Prefere falar directamente pelo WhatsApp?
+              Falar directamente no WhatsApp
             </a>
           </div>
         </div>
@@ -254,10 +254,10 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
         <div className="flex-1 flex flex-col justify-between bg-slate-50/50 overflow-hidden">
           {/* Attached Property Card Badge */}
           {attachedProperty && (
-            <div className="p-2.5 bg-amber-50 border-b border-amber-200 flex items-center justify-between text-xs">
+            <div className="p-2.5 bg-blue-50 border-b border-blue-200 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 truncate">
-                <Building className="w-4 h-4 text-amber-600 shrink-0" />
-                <span className="truncate font-semibold text-amber-950">
+                <Building className="w-4 h-4 text-[#0052A5] shrink-0" />
+                <span className="truncate font-semibold text-[#003366]">
                   Imóvel: {attachedProperty.title}
                 </span>
               </div>
@@ -276,11 +276,11 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {/* Automatic Greeting Banner */}
             <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs text-xs text-slate-700 space-y-1">
-              <p className="font-bold text-amber-700 flex items-center gap-1.5">
-                <Headphones className="w-3.5 h-3.5" /> Aliança Imobiliária
+              <p className="font-bold text-[#0052A5] flex items-center gap-1.5">
+                <Headphones className="w-3.5 h-3.5" /> A.PANZO Imobiliária
               </p>
               <p>
-                Bem-vindo ao canal de apoio em tempo real. Os nossos consultores estão disponíveis para responder a todas as suas dúvidas sobre compra, venda ou arrendamento.
+                Bem-vindo ao canal de atendimento em tempo real. Cuidamos do seu imóvel como se fosse nosso. Como podemos ajudá-lo hoje?
               </p>
             </div>
 
@@ -297,14 +297,14 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
                   <div
                     className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed shadow-xs ${
                       isUser
-                        ? 'bg-slate-900 text-white rounded-tr-none'
+                        ? 'bg-[#0052A5] text-white rounded-tr-none'
                         : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
                     }`}
                   >
                     <p className="whitespace-pre-line">{msg.text}</p>
                     <div
                       className={`flex items-center justify-end gap-1 mt-1 text-[9px] ${
-                        isUser ? 'text-amber-300/80' : 'text-slate-400'
+                        isUser ? 'text-blue-100' : 'text-slate-400'
                       }`}
                     >
                       <span>
@@ -315,9 +315,9 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
                       </span>
                       {isUser && (
                         msg.read ? (
-                          <CheckCheck className="w-3 h-3 text-amber-400" />
+                          <CheckCheck className="w-3 h-3 text-blue-200" />
                         ) : (
-                          <Check className="w-3 h-3 text-slate-400" />
+                          <Check className="w-3 h-3 text-white/70" />
                         )
                       )}
                     </div>
@@ -330,9 +330,9 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
 
           {/* Quick Fallback to WhatsApp & Phone */}
           <div className="px-3 py-1.5 bg-white border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-            <span className="font-medium">Canal de Angola</span>
+            <span className="font-medium">Angola</span>
             <a
-              href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá Aliança Imobiliária! Gostaria de dar continuidade à conversa no WhatsApp.')}`}
+              href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá A.PANZO Imobiliária! Gostaria de dar continuidade à conversa no WhatsApp.')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-emerald-700 font-bold hover:underline flex items-center gap-1"

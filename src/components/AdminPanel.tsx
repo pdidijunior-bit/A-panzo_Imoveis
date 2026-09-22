@@ -141,10 +141,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [storyInput, setStoryInput] = useState(siteSettings.aboutStory || '');
   const [missionInput, setMissionInput] = useState(siteSettings.aboutMission || '');
   const [visionInput, setVisionInput] = useState(siteSettings.aboutVision || '');
-  const [phoneInput, setPhoneInput] = useState(siteSettings.phone || '+244 924 875 869');
-  const [whatsappInput, setWhatsappInput] = useState(siteSettings.whatsapp || '+244 924 875 869');
-  const [emailInput, setEmailInput] = useState(siteSettings.email || 'contacto@aliancaimobiliaria.ao');
-  const [addressInput, setAddressInput] = useState(siteSettings.address || 'Luanda & Malanje, Angola');
+  const [phoneInput, setPhoneInput] = useState(siteSettings.phone || '+244 925 883 080');
+  const [phone2Input, setPhone2Input] = useState(siteSettings.phone2 || '+244 928 771 808');
+  const [phone3Input, setPhone3Input] = useState(siteSettings.phone3 || '+244 952 644 332');
+  const [whatsappInput, setWhatsappInput] = useState(siteSettings.whatsapp || '+244 925 883 080');
+  const [emailInput, setEmailInput] = useState(siteSettings.email || 'comercial@anpanzo.com');
+  const [email2Input, setEmail2Input] = useState(siteSettings.email2 || 'ap.imobiliaria1985@gmail.com');
+  const [websiteInput, setWebsiteInput] = useState(siteSettings.website || 'anpanzo.com');
+  const [instagramInput, setInstagramInput] = useState(siteSettings.instagram || '@A.panzo comercial');
+  const [facebookInput, setFacebookInput] = useState(siteSettings.facebook || 'A.panzo comercial');
+  const [addressInput, setAddressInput] = useState(siteSettings.address || 'Angola – Serviço com Qualidade e Confiança');
   const [hoursInput, setHoursInput] = useState(siteSettings.workingHours || 'Segunda a Sábado: 08:00 - 18:00');
   const [isSavingInstitutional, setIsSavingInstitutional] = useState(false);
 
@@ -510,12 +516,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         aboutMission: missionInput.trim(),
         aboutVision: visionInput.trim(),
         phone: phoneInput.trim(),
+        phone2: phone2Input.trim(),
+        phone3: phone3Input.trim(),
         whatsapp: whatsappInput.trim(),
         email: emailInput.trim(),
+        email2: email2Input.trim(),
+        website: websiteInput.trim(),
+        instagram: instagramInput.trim(),
+        facebook: facebookInput.trim(),
         address: addressInput.trim(),
         workingHours: hoursInput.trim(),
       });
-      alert('Informações institucionais e contactos atualizados!');
+      alert('Informações institucionais e contactos da A.PANZO atualizados com sucesso!');
     } catch (err) {
       alert('Erro ao atualizar informações.');
     } finally {
@@ -579,7 +591,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     try {
       await dbService.sendAdminReply(
         selectedConversation.id,
-        'Consultor Aliança Imobiliária',
+        'Consultor A.PANZO Imobiliária',
         adminReplyText.trim()
       );
       setAdminReplyText('');
@@ -595,12 +607,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return (
       <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 sm:p-7 border border-slate-200 text-center animate-in zoom-in-95 duration-200">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center mx-auto mb-4 shadow-md shadow-amber-500/20">
+          <div className="w-14 h-14 rounded-2xl bg-[#0052A5] text-white flex items-center justify-center mx-auto mb-4 shadow-md">
             <Shield className="w-7 h-7" />
           </div>
 
-          <span className="text-xs font-bold uppercase tracking-widest text-amber-600 block mb-1">
-            Aliança Imobiliária
+          <span className="text-xs font-bold uppercase tracking-widest text-[#0052A5] block mb-1">
+            A.PANZO Imobiliária
           </span>
           <h3 className="font-brand-display text-2xl font-extrabold text-slate-900">
             Portal Administrativo
@@ -1443,10 +1455,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-slate-100">
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                    WhatsApp Oficial
+                    WhatsApp Principal
                   </label>
                   <input
                     type="text"
@@ -1458,7 +1470,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                    Telefone Normal
+                    Telefone 1
                   </label>
                   <input
                     type="text"
@@ -1467,17 +1479,105 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-mono"
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                    Email de Contacto
+                    Telefone 2
+                  </label>
+                  <input
+                    type="text"
+                    value={phone2Input}
+                    onChange={(e) => setPhone2Input(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Telefone 3
+                  </label>
+                  <input
+                    type="text"
+                    value={phone3Input}
+                    onChange={(e) => setPhone3Input(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Email Principal
                   </label>
                   <input
                     type="email"
                     value={emailInput}
                     onChange={(e) => setEmailInput(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Email Secundário
+                  </label>
+                  <input
+                    type="email"
+                    value={email2Input}
+                    onChange={(e) => setEmail2Input(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Website Oficial
+                  </label>
+                  <input
+                    type="text"
+                    value={websiteInput}
+                    onChange={(e) => setWebsiteInput(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Instagram
+                  </label>
+                  <input
+                    type="text"
+                    value={instagramInput}
+                    onChange={(e) => setInstagramInput(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Facebook
+                  </label>
+                  <input
+                    type="text"
+                    value={facebookInput}
+                    onChange={(e) => setFacebookInput(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Endereço Físico / Províncias
+                  </label>
+                  <input
+                    type="text"
+                    value={addressInput}
+                    onChange={(e) => setAddressInput(e.target.value)}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
                   />
                 </div>
@@ -1495,22 +1595,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                  Endereço Físico / Províncias
-                </label>
-                <input
-                  type="text"
-                  value={addressInput}
-                  onChange={(e) => setAddressInput(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900"
-                />
-              </div>
-
               <button
                 type="submit"
                 disabled={isSavingInstitutional}
-                className="py-3 px-6 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                className="py-3 px-6 bg-[#0052A5] hover:bg-[#003366] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
               >
                 {isSavingInstitutional ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

@@ -48,7 +48,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const cleanWhatsapp = agencyWhatsapp.replace(/[^0-9]/g, '');
 
   const whatsappMessage = encodeURIComponent(
-    `Olá Aliança Imobiliária! Tenho interesse no imóvel "${property.title}" (Cód: ${property.code || property.id.slice(0, 6).toUpperCase()}) anunciado por ${formatKz(property.price)}${property.dealType === 'arrendamento' ? '/mês' : ''}. Gostaria de agendar uma visita ou obter mais informações.`
+    `Olá A.PANZO Imobiliária! Tenho interesse no imóvel "${property.title}" (Cód: ${property.code || property.id.slice(0, 6).toUpperCase()}) anunciado por ${formatKz(property.price)}${property.dealType === 'arrendamento' ? '/mês' : ''}. Gostaria de agendar uma visita ou obter mais informações.`
   );
 
   const coverImage =
@@ -57,7 +57,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1000&q=80';
 
   return (
-    <article className="group bg-white rounded-2xl border border-slate-200/90 hover:border-amber-400/80 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden">
+    <article className="group bg-white rounded-2xl border border-slate-200 hover:border-[#0052A5]/50 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden">
       {/* Media & Badges Container */}
       <div className="relative aspect-4/3 overflow-hidden bg-slate-100 cursor-pointer" onClick={() => onSelect(property)}>
         <img
@@ -73,72 +73,58 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Top Badges (Deal Type & Video indicator) */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
           <span
-            className={`px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider shadow-sm ${
+            className={`text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-md ${
               property.dealType === 'venda'
-                ? 'bg-amber-500 text-slate-950'
-                : property.dealType === 'arrendamento'
-                ? 'bg-blue-900 text-white'
-                : 'bg-emerald-700 text-white'
+                ? 'bg-[#0052A5] text-white'
+                : 'bg-emerald-600 text-white'
             }`}
           >
-            {property.dealType === 'venda'
-              ? 'Venda'
-              : property.dealType === 'arrendamento'
-              ? 'Arrendamento'
-              : 'Trespasse'}
+            {property.dealType === 'venda' ? 'Venda' : 'Arrendamento'}
           </span>
 
           <div className="flex items-center gap-1.5">
-            {property.hasVideo && (
-              <span className="bg-slate-950/80 backdrop-blur-xs text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm">
-                <Video className="w-3 h-3 text-amber-400" />
-                Vídeo
-              </span>
-            )}
-            {property.status !== 'disponivel' && (
-              <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md uppercase">
-                {property.status}
+            {property.videoUrl && (
+              <span className="p-1.5 rounded-full bg-slate-900/80 text-white backdrop-blur-xs flex items-center justify-center">
+                <Video className="w-3.5 h-3.5 text-blue-300" />
               </span>
             )}
 
             {/* Favorite Heart Button */}
             <button
-              id={`favorite-card-btn-${property.id}`}
-              type="button"
               onClick={handleHeartClick}
-              className={`p-1.5 rounded-full backdrop-blur-md transition-all shadow-md active:scale-90 ${
+              className={`p-2 rounded-full backdrop-blur-md transition-all ${
                 favorited
-                  ? 'bg-rose-500 text-white shadow-rose-500/40 ring-2 ring-white'
-                  : 'bg-slate-950/60 text-white hover:bg-slate-950/90 hover:text-rose-400'
+                  ? 'bg-rose-500 text-white shadow-md'
+                  : 'bg-white/80 hover:bg-white text-slate-800 hover:text-rose-600'
               }`}
               title={favorited ? 'Remover dos favoritos' : 'Guardar nos favoritos'}
-              aria-label={favorited ? 'Remover dos favoritos' : 'Guardar nos favoritos'}
+              aria-label="Favorito"
             >
-              <Heart className={`w-3.5 h-3.5 ${favorited ? 'fill-white' : ''}`} />
+              <Heart className={`w-4 h-4 ${favorited ? 'fill-white' : ''}`} />
             </button>
           </div>
         </div>
 
-        {/* Bottom Property Code & Photos Counter */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-xs font-semibold">
-          <span className="bg-slate-950/80 backdrop-blur-xs px-2.5 py-0.5 rounded text-[11px] font-mono text-amber-300">
-            {property.code || property.id.slice(0, 6).toUpperCase()}
+        {/* Bottom Badges on Image (Code & Status) */}
+        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white">
+          <span className="bg-slate-950/80 backdrop-blur-xs px-2.5 py-0.5 rounded-md font-mono text-[11px] border border-white/10">
+            {property.code ? `#${property.code}` : `#${property.id.slice(0, 6).toUpperCase()}`}
           </span>
 
-          {property.images && property.images.length > 1 && (
-            <span className="bg-slate-950/70 backdrop-blur-xs px-2 py-0.5 rounded text-[11px] text-slate-200">
-              {property.images.length} fotos
+          {property.featured && (
+            <span className="bg-[#0052A5] text-white text-[10px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-md shadow-xs">
+              Destaque
             </span>
           )}
         </div>
       </div>
 
-      {/* Content Container */}
-      <div className="p-5 flex-1 flex flex-col justify-between">
+      {/* Content Section */}
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
         <div>
           {/* Category & Location */}
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
-            <span className="font-semibold text-amber-700 uppercase tracking-wide text-[11px]">
+            <span className="font-semibold text-[#0052A5] uppercase tracking-wide text-[11px]">
               {property.categoryName || property.category}
             </span>
             <span className="flex items-center gap-1 text-slate-500 truncate max-w-[170px]">
@@ -150,7 +136,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           {/* Title */}
           <h3
             onClick={() => onSelect(property)}
-            className="font-bold text-slate-900 text-base line-clamp-1 hover:text-amber-600 transition-colors cursor-pointer"
+            className="font-bold text-slate-900 text-base line-clamp-1 hover:text-[#0052A5] transition-colors cursor-pointer"
             title={property.title}
           >
             {property.title}
@@ -195,7 +181,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               <span className="text-[10px] uppercase font-bold text-slate-400 block leading-none">
                 Preço
               </span>
-              <span className="text-lg font-extrabold text-slate-950 tracking-tight">
+              <span className="text-lg font-extrabold text-[#003366] tracking-tight">
                 {formatKz(property.price)}
               </span>
               {property.dealType === 'arrendamento' && (
@@ -204,32 +190,32 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
 
             {property.isNegotiable && (
-              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+              <span className="text-[10px] font-bold text-[#0052A5] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
                 Negociável
               </span>
             )}
           </div>
 
-          {/* Direct CTA Buttons with Excellent Spacing */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Direct CTA Buttons with Clean Labels and Balanced Padding (10px 16px) */}
+          <div className="grid grid-cols-2 gap-2.5">
             {/* WhatsApp External Direct */}
             <a
               href={`https://wa.me/${cleanWhatsapp}?text=${whatsappMessage}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold py-2.5 px-3 rounded-xl transition-all shadow-xs"
-              title="Conversar sobre este imóvel no WhatsApp"
+              className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold py-2.5 px-3.5 rounded-xl transition-all shadow-xs"
+              title="Fale Connosco no WhatsApp"
             >
-              <MessageCircle className="w-3.5 h-3.5" />
+              <MessageCircle className="w-4 h-4" />
               <span>WhatsApp</span>
             </a>
 
             {/* View Details Modal */}
             <button
               onClick={() => onSelect(property)}
-              className="flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-amber-500 hover:text-slate-950 text-white text-xs font-bold py-2.5 px-3 rounded-xl transition-all shadow-xs"
+              className="flex items-center justify-center gap-1.5 bg-[#0052A5] hover:bg-[#003366] text-white text-xs font-bold py-2.5 px-3.5 rounded-xl transition-all shadow-xs"
             >
-              <Eye className="w-3.5 h-3.5" />
+              <Eye className="w-4 h-4" />
               <span>Ver Imóvel</span>
             </button>
           </div>
