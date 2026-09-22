@@ -399,13 +399,13 @@ function MainApp() {
                   ) : null}
 
                   <a
-                    href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá Aliança Imobiliária! Gostaria de encomendar a procura de um imóvel específico.')}`}
+                    href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá A.PANZO Imobiliária! Gostaria de encomendar a procura de um imóvel específico.')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all"
+                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    Consultar via WhatsApp
+                    <span>Fale Connosco</span>
                   </a>
                 </div>
               </div>
@@ -413,31 +413,31 @@ function MainApp() {
           </section>
 
           {/* Institutional Trust & Call To Action Banner */}
-          <section className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white py-14 sm:py-16 border-y border-amber-500/20 relative overflow-hidden">
+          <section className="bg-gradient-to-r from-[#00172E] via-[#002244] to-[#003366] text-white py-14 sm:py-16 border-y border-[#0052A5]/30 relative overflow-hidden">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 <div className="lg:col-span-8 space-y-4">
-                  <span className="text-xs font-bold text-amber-400 uppercase tracking-widest block">
+                  <span className="text-xs font-bold text-blue-300 uppercase tracking-widest block">
                     Proprietários e Investidores
                   </span>
                   <h2 className="font-brand-display text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight text-white">
                     Deseja Vender ou Arrendar o Seu Imóvel com Segurança?
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-                    A Aliança Imobiliária cuida de todo o processo de divulgação, qualificação de interessados, vistorias e conformidade jurídica em Luanda, Malanje e demais regiões de Angola.
+                  <p className="text-xs sm:text-sm text-slate-200 max-w-2xl leading-relaxed">
+                    A A.PANZO Imobiliária cuida do seu imóvel como se fosse nosso. Gerimos todo o processo de divulgação, qualificação de interessados, vistorias e conformidade jurídica em Luanda, Malanje e demais províncias de Angola.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                    <div className="flex items-center gap-2 text-xs text-amber-200">
-                      <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div className="flex items-center gap-2 text-xs text-blue-200">
+                      <CheckCircle2 className="w-4 h-4 text-blue-300 shrink-0" />
                       <span>Avaliação Rigorosa</span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-amber-200">
-                      <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div className="flex items-center gap-2 text-xs text-blue-200">
+                      <CheckCircle2 className="w-4 h-4 text-blue-300 shrink-0" />
                       <span>Divulgação Estratégica</span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-amber-200">
-                      <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div className="flex items-center gap-2 text-xs text-blue-200">
+                      <CheckCircle2 className="w-4 h-4 text-blue-300 shrink-0" />
                       <span>Apoio Jurídico Total</span>
                     </div>
                   </div>
@@ -445,42 +445,43 @@ function MainApp() {
 
                 <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-3">
                   <a
-                    href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá Aliança Imobiliária! Gostaria de cadastrar o meu imóvel para venda/arrendamento.')}`}
+                    href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá A.PANZO Imobiliária! Gostaria de cadastrar o meu imóvel para venda/arrendamento.')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs uppercase tracking-wider py-3.5 px-6 rounded-xl transition-all shadow-lg"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span>Falar no WhatsApp Directo</span>
+                    <span>Fale Connosco</span>
                   </a>
 
                   <a
                     href={`tel:${settings.phone}`}
-                    className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-100 active:scale-95 text-slate-950 font-bold text-xs py-3.5 px-6 rounded-xl transition-all shadow-md"
+                    className="inline-flex items-center justify-center gap-2 bg-[#0052A5] hover:bg-[#003366] active:scale-95 text-white font-bold text-xs py-3.5 px-6 rounded-xl transition-all shadow-md"
+                    title={`Ligar para ${settings.phone}`}
                   >
-                    <Phone className="w-4 h-4 text-amber-600" />
-                    <span>Ligar: {settings.phone}</span>
+                    <Phone className="w-4 h-4 text-white" />
+                    <span>Ligar Agora</span>
                   </a>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Pillars of Excellence (Diferenciais Aliança Imobiliária) */}
+          {/* Pillars of Excellence (Diferenciais A.PANZO Imobiliária) */}
           <section className="py-14 sm:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-10">
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-700 block mb-1">
+              <span className="text-xs font-bold uppercase tracking-widest text-[#0052A5] block mb-1">
                 Diferenciais da Nossa Marca
               </span>
               <h2 className="font-brand-display text-2xl sm:text-3xl font-extrabold text-slate-900">
-                Por Que Escolher a Aliança Imobiliária?
+                Por Que Escolher a A.PANZO Imobiliária?
               </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div>
-                  <div className="w-12 h-12 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold mb-4 shadow-xs">
+                  <div className="w-12 h-12 rounded-xl bg-[#0052A5] text-white flex items-center justify-center font-bold mb-4 shadow-xs">
                     <ShieldCheck className="w-6 h-6" />
                   </div>
                   <h3 className="font-bold text-slate-900 text-base mb-1.5">
@@ -494,21 +495,21 @@ function MainApp() {
 
               <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div>
-                  <div className="w-12 h-12 rounded-xl bg-slate-900 text-amber-400 flex items-center justify-center font-bold mb-4 shadow-xs">
+                  <div className="w-12 h-12 rounded-xl bg-[#003366] text-white flex items-center justify-center font-bold mb-4 shadow-xs">
                     <Award className="w-6 h-6" />
                   </div>
                   <h3 className="font-bold text-slate-900 text-base mb-1.5">
                     Consultoria de Alta Confiança
                   </h3>
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Equipa com conhecimento aprofundado dos valores reais por metro quadrado em Luanda (Talatona, Kilamba, Maianga, etc.) e em Malanje.
+                    Equipa com conhecimento aprofundado do mercado angolano e apoio contínuo para proprietários, compradores e inquilinos.
                   </p>
                 </div>
               </div>
 
               <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
                 <div>
-                  <div className="w-12 h-12 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold mb-4 shadow-xs">
+                  <div className="w-12 h-12 rounded-xl bg-[#0052A5] text-white flex items-center justify-center font-bold mb-4 shadow-xs">
                     <Users className="w-6 h-6" />
                   </div>
                   <h3 className="font-bold text-slate-900 text-base mb-1.5">
