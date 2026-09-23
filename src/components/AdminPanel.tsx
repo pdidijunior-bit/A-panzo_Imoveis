@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Shield,
   Plus,
@@ -28,6 +28,8 @@ import {
   Sparkles,
   KeyRound,
   EyeOff,
+  ArrowLeft,
+  Clock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { dbService } from '../lib/dbService';
@@ -160,6 +162,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [conversationMessages, setConversationMessages] = useState<Message[]>([]);
   const [adminReplyText, setAdminReplyText] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
+  const adminMessagesEndRef = useRef<HTMLDivElement>(null);
+
+  const unreadConvsCount = useMemo(() => {
+    return conversations.filter((c) => (c.unreadByAdmin || 0) > 0).length;
+  }, [conversations]);
+
+  useEffect(() => {
+    if (activeTab === 'messages' && selectedConversation) {
+      setTimeout(() => {
+        adminMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 50);
+    }
+  }, [conversationMessages, activeTab, selectedConversation]);
 
   // Listen to conversations
   useEffect(() => {
@@ -710,7 +725,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           )}
 
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-            <span>Aliança Imobiliária • Angola</span>
+            <span>A.PANZO Imobiliária • Angola</span>
             <button onClick={onClose} className="hover:text-slate-800 font-semibold cursor-pointer">
               Voltar ao Catálogo
             </button>
@@ -725,12 +740,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       {/* Admin Top Header */}
       <header className="bg-slate-950 text-white px-4 sm:px-8 py-3.5 border-b border-amber-500/30 flex items-center justify-between sticky top-0 z-30 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-black text-sm shadow-xs">
-            ALI
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#0052A5] to-amber-500 text-white flex items-center justify-center font-black text-xs shadow-xs tracking-wider">
+            APZ
           </div>
           <div>
             <h1 className="font-brand-display text-base font-bold text-white leading-none">
-              Painel ADM • Aliança Imobiliária
+              Painel ADM • A.PANZO Imobiliária
             </h1>
             <p className="text-[10px] text-amber-400/90 font-mono mt-0.5 flex items-center gap-1.5">
               <span>Acesso:</span>
@@ -742,9 +757,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-2.5">
+          {/* Quick Chat Shortcut in Top Header */}
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'messages'
+                ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300'
+                : 'bg-slate-850 hover:bg-slate-800 text-white border border-slate-700'
+            }`}
+            title="Abrir Chat Online dos Clientes"
+          >
+            <MessageSquare className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Chat Online</span>
+            {unreadConvsCount > 0 ? (
+              <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black animate-pulse">
+                {unreadConvsCount}
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-400 font-mono">({conversations.length})</span>
+            )}
+          </button>
+
           <button
             onClick={signOut}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors text-xs font-medium flex items-center gap-1.5"
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors text-xs font-medium flex items-center gap-1.5 cursor-pointer"
             title="Terminar Sessão"
           >
             <LogOut className="w-4 h-4" />
@@ -753,7 +789,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={onClose}
-            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-extrabold transition-all"
+            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-xs"
           >
             Ver Site Público
           </button>
@@ -765,7 +801,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         <div className="flex items-center gap-1 sm:gap-4 py-2 min-w-max">
           <button
             onClick={() => setActiveTab('properties')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'properties'
                 ? 'bg-amber-500 text-slate-950 shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -777,14 +813,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={() => setActiveTab('messages')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'messages'
                 ? 'bg-amber-500 text-slate-950 shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
-            <MessageSquare className="w-4 h-4" />
-            <span>Central de Mensagens ({conversations.length})</span>
+            <MessageSquare className="w-4 h-4 text-blue-600" />
+            <span>Chat Online & Mensagens</span>
+            {unreadConvsCount > 0 ? (
+              <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold animate-pulse">
+                {unreadConvsCount} novas
+              </span>
+            ) : (
+              <span className="text-[10px] text-slate-400 font-mono">({conversations.length})</span>
+            )}
           </button>
 
           <button
@@ -849,7 +892,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   Gestão de Anúncios e Imóveis
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Publique, edite e gira o catálogo de propriedades da Aliança Imobiliária.
+                  Publique, edite e gira o catálogo de propriedades da A.PANZO Imobiliária.
                 </p>
               </div>
 
@@ -1277,72 +1320,132 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* TAB 5: REAL-TIME MESSAGING INBOX */}
         {activeTab === 'messages' && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col md:flex-row h-[600px]">
-            {/* Conversations list sidebar */}
-            <div className="w-full md:w-80 border-r border-slate-200 flex flex-col bg-slate-50/50">
-              <div className="p-4 border-b border-slate-200 bg-white">
-                <h3 className="font-bold text-sm text-slate-900">Mensagens dos Clientes</h3>
-                <p className="text-[11px] text-slate-500">Conversas em tempo real via Firestore</p>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col md:flex-row h-[650px]">
+            {/* Conversations list sidebar - hidden on mobile when viewing a conversation */}
+            <div
+              className={`w-full md:w-80 border-r border-slate-200 flex flex-col bg-slate-50/50 ${
+                selectedConversation ? 'hidden md:flex' : 'flex'
+              }`}
+            >
+              <div className="p-4 border-b border-slate-200 bg-white flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <span>Chat Online com Clientes</span>
+                    {unreadConvsCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                        {unreadConvsCount}
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">Respostas directas em tempo real via Firestore</p>
+                </div>
+                <button
+                  onClick={() => {
+                    const unsub = dbService.subscribeConversations(
+                      (convs) => setConversations(convs),
+                      (err) => console.warn(err)
+                    );
+                    setTimeout(unsub, 1000);
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  title="Atualizar lista"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
               </div>
 
               <div className="overflow-y-auto flex-1 divide-y divide-slate-100">
                 {conversations.length === 0 ? (
-                  <div className="p-6 text-center text-xs text-slate-400">
-                    Nenhuma mensagem recebida ainda.
+                  <div className="p-8 text-center text-xs text-slate-400 space-y-2">
+                    <MessageSquare className="w-8 h-8 text-slate-300 mx-auto" />
+                    <p className="font-semibold text-slate-600">Nenhuma mensagem recebida ainda.</p>
+                    <p className="text-[11px]">Quando os utilizadores enviarem dúvidas pelo chat do site, as conversas surgirão aqui instantaneamente.</p>
                   </div>
                 ) : (
-                  conversations.map((c) => (
-                    <div
-                      key={c.id}
-                      onClick={() => setSelectedConversation(c)}
-                      className={`p-3.5 cursor-pointer transition-colors ${
-                        selectedConversation?.id === c.id
-                          ? 'bg-amber-50 border-l-4 border-amber-500'
-                          : 'hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-xs text-slate-900 truncate">
-                          {c.clientName}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(c.lastMessageAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+                  conversations.map((c) => {
+                    const isUnread = (c.unreadByAdmin || 0) > 0;
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => setSelectedConversation(c)}
+                        className={`p-3.5 cursor-pointer transition-colors relative ${
+                          selectedConversation?.id === c.id
+                            ? 'bg-amber-50/80 border-l-4 border-amber-500 shadow-xs'
+                            : isUnread
+                            ? 'bg-blue-50/60 hover:bg-blue-50 font-semibold border-l-4 border-blue-600'
+                            : 'hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1.5 truncate">
+                            {isUnread && (
+                              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
+                            )}
+                            <span className={`text-xs truncate ${isUnread ? 'font-black text-slate-900' : 'font-bold text-slate-800'}`}>
+                              {c.clientName || 'Cliente Visitante'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 shrink-0 font-mono ml-1">
+                            {new Date(c.lastMessageAt).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        <p className={`text-xs line-clamp-1 ${isUnread ? 'text-slate-900 font-medium' : 'text-slate-600'}`}>
+                          {c.lastMessage}
+                        </p>
+                        {c.propertyTitle && (
+                          <span className="text-[10px] text-amber-800 bg-amber-100/70 border border-amber-200/60 px-1.5 py-0.5 rounded-md mt-1 inline-block truncate max-w-full font-medium">
+                            Imóvel: {c.propertyTitle}
+                          </span>
+                        )}
                       </div>
-                      <p className="text-xs text-slate-600 line-clamp-1">{c.lastMessage}</p>
-                      {c.propertyTitle && (
-                        <span className="text-[10px] text-amber-700 bg-amber-100/60 px-1.5 py-0.5 rounded mt-1 inline-block truncate max-w-full">
-                          Imóvel: {c.propertyTitle}
-                        </span>
-                      )}
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
 
-            {/* Conversation detail and reply window */}
-            <div className="flex-1 flex flex-col justify-between bg-white">
+            {/* Conversation detail and reply window - shown on mobile if conversation is selected */}
+            <div
+              className={`flex-1 flex flex-col justify-between bg-white ${
+                selectedConversation ? 'flex' : 'hidden md:flex'
+              }`}
+            >
               {selectedConversation ? (
                 <>
-                  <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                    <div>
-                      <h4 className="font-bold text-sm text-slate-900">{selectedConversation.clientName}</h4>
-                      {selectedConversation.clientPhone && (
-                        <a
-                          href={`tel:${selectedConversation.clientPhone}`}
-                          className="text-xs text-amber-700 font-mono flex items-center gap-1 hover:underline"
-                        >
-                          <Phone className="w-3 h-3" />
-                          {selectedConversation.clientPhone}
-                        </a>
-                      )}
+                  {/* Chat Top Info Header */}
+                  <div className="p-3.5 sm:p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedConversation(null)}
+                        className="md:hidden p-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 flex items-center gap-1 text-xs font-bold cursor-pointer"
+                        title="Voltar às conversas"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Conversas</span>
+                      </button>
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                          <span>{selectedConversation.clientName}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                            Online
+                          </span>
+                        </h4>
+                        {selectedConversation.clientPhone && (
+                          <a
+                            href={`tel:${selectedConversation.clientPhone}`}
+                            className="text-xs text-amber-700 font-mono flex items-center gap-1 hover:underline mt-0.5"
+                          >
+                            <Phone className="w-3 h-3" />
+                            {selectedConversation.clientPhone}
+                          </a>
+                        )}
+                      </div>
                     </div>
                     {selectedConversation.propertyTitle && (
-                      <span className="text-xs bg-amber-50 text-amber-900 px-2.5 py-1 rounded-lg border border-amber-200">
+                      <span className="text-xs bg-amber-50 text-amber-900 px-2.5 py-1 rounded-lg border border-amber-200 hidden sm:inline-block max-w-[200px] truncate">
                         Interesse: {selectedConversation.propertyTitle}
                       </span>
                     )}
@@ -1350,54 +1453,99 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
                   {/* Messages list */}
                   <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/40">
-                    {conversationMessages.map((m) => (
-                      <div
-                        key={m.id}
-                        className={`flex flex-col ${
-                          m.sender === 'admin' ? 'items-end' : 'items-start'
-                        }`}
-                      >
+                    {conversationMessages.map((m) => {
+                      const isAdminMsg = m.sender === 'admin';
+                      return (
                         <div
-                          className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed ${
-                            m.sender === 'admin'
-                              ? 'bg-slate-950 text-white rounded-tr-none'
-                              : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none shadow-xs'
+                          key={m.id}
+                          className={`flex flex-col ${
+                            isAdminMsg ? 'items-end' : 'items-start'
                           }`}
                         >
-                          <p>{m.text}</p>
-                          <span className="text-[9px] text-slate-400 block text-right mt-1">
-                            {new Date(m.timestamp).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
+                          <div
+                            className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-xs ${
+                              isAdminMsg
+                                ? 'bg-gradient-to-r from-[#003366] to-[#0052A5] text-white rounded-tr-none'
+                                : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
+                            }`}
+                          >
+                            <p className="whitespace-pre-wrap">{m.text}</p>
+                            <div className="flex items-center justify-end gap-1 mt-1 text-[9px] opacity-75">
+                              <Clock className="w-2.5 h-2.5" />
+                              <span>
+                                {new Date(m.timestamp).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
+                    <div ref={adminMessagesEndRef} />
+                  </div>
+
+                  {/* Quick Replies Strip */}
+                  <div className="px-3 py-1.5 bg-slate-100 border-t border-slate-200 flex items-center gap-1.5 overflow-x-auto text-[11px]">
+                    <span className="text-slate-500 font-bold shrink-0 text-[10px] uppercase tracking-wider">
+                      Respostas rápidas:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAdminReplyText('Olá! Sim, o imóvel continua disponível para visita.')}
+                      className="px-2.5 py-1 bg-white hover:bg-slate-200 rounded-full border border-slate-200 text-slate-700 whitespace-nowrap text-[11px] transition-colors cursor-pointer"
+                    >
+                      Imóvel disponível
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdminReplyText('Podemos agendar uma visita ao local. Qual o melhor dia e horário para si?')}
+                      className="px-2.5 py-1 bg-white hover:bg-slate-200 rounded-full border border-slate-200 text-slate-700 whitespace-nowrap text-[11px] transition-colors cursor-pointer"
+                    >
+                      Agendar visita
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAdminReplyText('Por favor, pode fornecer o seu contacto WhatsApp para enviarmos mais fotografias e detalhes?')}
+                      className="px-2.5 py-1 bg-white hover:bg-slate-200 rounded-full border border-slate-200 text-slate-700 whitespace-nowrap text-[11px] transition-colors cursor-pointer"
+                    >
+                      Pedir WhatsApp
+                    </button>
                   </div>
 
                   {/* Reply Input Form */}
-                  <form onSubmit={handleSendAdminReply} className="p-3 border-t border-slate-200 flex items-center gap-2">
+                  <form onSubmit={handleSendAdminReply} className="p-3 border-t border-slate-200 flex items-center gap-2 bg-white">
                     <input
                       type="text"
                       value={adminReplyText}
                       onChange={(e) => setAdminReplyText(e.target.value)}
-                      placeholder="Responder ao cliente em tempo real..."
+                      placeholder="Escreva a sua resposta directa ao cliente..."
                       className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
                     />
                     <button
                       type="submit"
                       disabled={!adminReplyText.trim() || isSendingReply}
-                      className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5"
+                      className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 font-extrabold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
                     >
-                      <Send className="w-4 h-4" />
-                      <span>Enviar</span>
+                      {isSendingReply ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                      <span className="hidden sm:inline">Enviar</span>
                     </button>
                   </form>
                 </>
               ) : (
-                <div className="flex-1 flex items-center justify-center text-xs text-slate-400">
-                  Selecione uma conversa ao lado para responder.
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center mb-3">
+                    <MessageSquare className="w-7 h-7" />
+                  </div>
+                  <h4 className="font-bold text-slate-700 text-sm mb-1">Central de Atendimento ao Cliente</h4>
+                  <p className="text-xs max-w-xs text-slate-500">
+                    Selecione uma das conversas na coluna esquerda para visualizar as mensagens e responder ao cliente em tempo real.
+                  </p>
                 </div>
               )}
             </div>

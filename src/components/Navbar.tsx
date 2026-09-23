@@ -21,6 +21,7 @@ import { NotificationDropdown } from './NotificationDropdown';
 import { Property } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
+import { useFavoritesAndAlerts } from '../context/FavoritesAndAlertsContext';
 
 interface NavbarProps {
   onOpenAdmin: () => void;
@@ -60,8 +61,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const { currentUser } = useAuth();
+  const favContext = useFavoritesAndAlerts();
+
+  const effectiveFavoriteCount = favoriteCount > 0 ? favoriteCount : favContext.favoriteCount;
+  const effectiveUnreadCount = favContext.unreadCount;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -78,6 +82,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const openUserDashboard = (tab?: 'favorites' | 'alerts' | 'profile') => {
     if (onOpenUserDashboard) {
       onOpenUserDashboard(tab);
+    } else {
+      favContext.openUserDashboard(tab || 'favorites');
     }
   };
 
@@ -92,24 +98,25 @@ export const Navbar: React.FC<NavbarProps> = ({
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            {/* Logo / Brand */}
-            <button
-              onClick={onNavigateHome}
-              className="text-left focus:outline-hidden group"
-              aria-label="A.PANZO Imobiliária - Início"
-            >
-              <BrandLogo customLogoUrl={logoUrl} size="md" />
-            </button>
+            {/* Logo / Brand with generous breathing room */}
+            <div className="shrink-0 mr-6 lg:mr-8 xl:mr-10">
+              <button
+                onClick={onNavigateHome}
+                className="text-left focus:outline-hidden group cursor-pointer block"
+                aria-label="A.PANZO Imobiliária - Início"
+              >
+                <BrandLogo customLogoUrl={logoUrl} size="md" />
+              </button>
+            </div>
 
-            {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-700">
+            {/* Desktop Navigation Links with generous spacing */}
+            <nav className="hidden lg:flex items-center gap-6 xl:gap-8 2xl:gap-9 text-sm font-medium text-slate-600">
               <button
                 onClick={() => onNavigateHome()}
-                className={`transition-colors hover:text-[#0052A5] flex items-center gap-1.5 ${
-                  activeView === 'home' ? 'text-[#0052A5]' : ''
+                className={`transition-colors hover:text-[#0052A5] cursor-pointer py-1 ${
+                  activeView === 'home' ? 'text-[#0052A5] font-bold' : ''
                 }`}
               >
-                <Home className="w-4 h-4 text-[#0052A5]" />
                 Início
               </button>
 
@@ -118,7 +125,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onNavigateHome();
                   if (onSelectDealType) onSelectDealType('venda');
                 }}
-                className="transition-colors hover:text-[#0052A5] flex items-center gap-1"
+                className="transition-colors hover:text-[#0052A5] cursor-pointer py-1"
               >
                 Comprar
               </button>
@@ -128,7 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onNavigateHome();
                   if (onSelectDealType) onSelectDealType('arrendamento');
                 }}
-                className="transition-colors hover:text-[#0052A5] flex items-center gap-1"
+                className="transition-colors hover:text-[#0052A5] cursor-pointer py-1"
               >
                 Arrendar
               </button>
@@ -138,7 +145,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onNavigateHome();
                   if (onSelectCategory) onSelectCategory('cat-terrenos');
                 }}
-                className="transition-colors hover:text-[#0052A5]"
+                className="transition-colors hover:text-[#0052A5] cursor-pointer py-1"
               >
                 Terrenos
               </button>
@@ -148,69 +155,71 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onNavigateHome();
                   if (onSelectCategory) onSelectCategory('cat-espacos-comerciais');
                 }}
-                className="transition-colors hover:text-[#0052A5]"
+                className="transition-colors hover:text-[#0052A5] cursor-pointer py-1"
               >
                 Comercial
               </button>
 
               <button
                 onClick={onOpenAbout}
-                className="transition-colors hover:text-[#0052A5] flex items-center gap-1.5"
+                className="transition-colors hover:text-[#0052A5] cursor-pointer py-1"
               >
-                <Info className="w-4 h-4 text-slate-400" />
                 Sobre Nós
               </button>
             </nav>
 
-            {/* Direct Contact Buttons (Desktop) - Clean, essential labels with proper padding */}
-            <div className="hidden sm:flex items-center gap-3">
-              {/* WhatsApp Direct */}
+            {/* Direct Contact Buttons (Desktop) - Unified hierarchy: Primary (WhatsApp) + Secondary (Call) + Support */}
+            <div className="hidden sm:flex items-center gap-2.5 xl:gap-3 ml-auto">
+              {/* WhatsApp Direct (Primary Action - Green) */}
               <a
                 href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá A.PANZO Imobiliária! Gostaria de consultar informações sobre os imóveis disponíveis.')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md"
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-semibold text-xs tracking-wide px-4 py-2.5 rounded-xl transition-all shadow-xs"
                 title="Fale Connosco no WhatsApp"
               >
-                <MessageCircle className="w-4 h-4" />
-                <span>Fale Connosco</span>
+                <MessageCircle className="w-4 h-4 text-white" />
+                <span className="whitespace-nowrap">Fale Connosco</span>
               </a>
 
-              {/* Normal Phone Call */}
+              {/* Phone Call (Secondary Action - Clean Outline/Subtle) */}
               <a
                 href={`tel:${phone}`}
-                className="inline-flex items-center gap-2 bg-[#0052A5] hover:bg-[#003366] active:scale-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm"
+                className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 active:scale-98 text-slate-700 hover:text-slate-950 font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 transition-all shadow-xs"
                 title={`Ligar para ${phone}`}
               >
-                <Phone className="w-4 h-4 text-white" />
-                <span>Ligar Agora</span>
+                <Phone className="w-3.5 h-3.5 text-[#0052A5]" />
+                <span className="whitespace-nowrap">Ligar Agora</span>
               </a>
 
-              {/* Real-Time Chat Assistant Trigger */}
+              {/* Real-Time Chat Assistant Trigger (Quiet Helper) */}
               <button
                 onClick={onOpenChat}
-                className="inline-flex items-center gap-1.5 bg-blue-50 hover:bg-blue-100 text-[#0052A5] font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition-all border border-blue-200"
+                className="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-blue-50 text-[#0052A5] font-semibold text-xs px-3 py-2.5 rounded-xl transition-all border border-slate-200 hover:border-blue-300 cursor-pointer"
                 title="Apoio e Atendimento ao Cliente"
               >
                 <Headphones className="w-4 h-4 text-[#0052A5]" />
                 <span className="hidden xl:inline">Apoio</span>
               </button>
 
+              {/* Subtle Divider */}
+              <div className="h-6 w-px bg-slate-200 mx-1" aria-hidden="true" />
+
               {/* Favorites Button (Desktop) */}
               <button
                 id="navbar-favorites-btn"
                 onClick={() => openUserDashboard('favorites')}
-                className="relative p-2.5 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-slate-700 transition-all flex items-center gap-1.5"
+                className="relative p-2.5 rounded-xl border border-slate-200 hover:border-rose-300 hover:bg-rose-50/50 text-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
                 title="Meus Favoritos"
               >
                 <Heart
                   className={`w-4 h-4 ${
-                    favoriteCount > 0 ? 'text-rose-500 fill-rose-500' : 'text-slate-500'
+                    effectiveFavoriteCount > 0 ? 'text-rose-500 fill-rose-500' : 'text-slate-500'
                   }`}
                 />
-                {favoriteCount > 0 && (
+                {effectiveFavoriteCount > 0 && (
                   <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-extrabold leading-none">
-                    {favoriteCount}
+                    {effectiveFavoriteCount}
                   </span>
                 )}
               </button>
@@ -220,7 +229,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   id="navbar-notifications-btn"
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
-                  className={`relative p-2.5 rounded-xl border transition-all flex items-center gap-1.5 ${
+                  className={`relative p-2.5 rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
                     notificationsOpen
                       ? 'bg-blue-50 border-blue-400 text-slate-950 shadow-xs'
                       : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-slate-700'
@@ -228,9 +237,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   title="Notificações e Oportunidades"
                 >
                   <Bell className="w-4 h-4 text-[#0052A5]" />
-                  {unreadCount > 0 && (
+                  {effectiveUnreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold animate-pulse">
-                      {unreadCount}
+                      {effectiveUnreadCount}
                     </span>
                   )}
                 </button>
@@ -249,11 +258,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 id="navbar-user-dashboard-btn"
                 onClick={() => openUserDashboard('profile')}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all border border-slate-200"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-all border border-slate-200 cursor-pointer"
                 title="Área do Cliente"
               >
                 <UserIcon className="w-3.5 h-3.5 text-[#0052A5]" />
-                <span className="hidden xl:inline">
+                <span className="hidden 2xl:inline">
                   {currentUser ? currentUser.displayName?.split(' ')[0] || 'Conta' : 'Área do Cliente'}
                 </span>
               </button>
@@ -261,15 +270,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Admin Portal Button */}
               <button
                 onClick={onOpenAdmin}
-                className={`p-2.5 rounded-xl border transition-all text-xs font-semibold flex items-center gap-1.5 ${
+                className={`p-2.5 rounded-xl border transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
                   isAdmin
                     ? 'bg-blue-50 text-[#0052A5] border-blue-300 ring-1 ring-blue-400/50'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                 }`}
                 title={isAdmin ? 'Painel Administrativo Ativo' : 'Acesso Administrativo'}
               >
                 <Shield className={`w-4 h-4 ${isAdmin ? 'text-[#0052A5]' : 'text-slate-400'}`} />
-                {isAdmin ? <span className="hidden md:inline font-bold">ADM</span> : null}
+                {isAdmin ? <span className="hidden md:inline font-bold text-[#0052A5]">ADM</span> : null}
               </button>
             </div>
 
@@ -278,17 +287,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Mobile Heart button */}
               <button
                 onClick={() => openUserDashboard('favorites')}
-                className="relative p-2 text-slate-700 bg-slate-100 rounded-lg"
+                className="relative p-2 text-slate-700 bg-slate-100 rounded-lg cursor-pointer"
                 title="Favoritos"
               >
                 <Heart
                   className={`w-4 h-4 ${
-                    favoriteCount > 0 ? 'text-rose-500 fill-rose-500' : 'text-slate-600'
+                    effectiveFavoriteCount > 0 ? 'text-rose-500 fill-rose-500' : 'text-slate-600'
                   }`}
                 />
-                {favoriteCount > 0 && (
+                {effectiveFavoriteCount > 0 && (
                   <span className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full bg-rose-500 text-white text-[9px] font-bold">
-                    {favoriteCount}
+                    {effectiveFavoriteCount}
                   </span>
                 )}
               </button>
@@ -386,11 +395,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     closeMenu();
                     openUserDashboard('favorites');
                   }}
-                  className="flex items-center justify-between w-full p-3 rounded-xl bg-rose-50/60 text-rose-900 hover:bg-rose-100/70 transition-colors"
+                  className="flex items-center justify-between w-full p-3 rounded-xl bg-rose-50/60 text-rose-900 hover:bg-rose-100/70 transition-colors cursor-pointer"
                 >
                   <span className="flex items-center gap-3 font-semibold">
                     <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
-                    Meus Favoritos ({favoriteCount})
+                    Meus Favoritos ({effectiveFavoriteCount})
                   </span>
                   <ChevronRight className="w-4 h-4 text-rose-300" />
                 </button>
@@ -400,15 +409,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                     closeMenu();
                     openUserDashboard('alerts');
                   }}
-                  className="flex items-center justify-between w-full p-3 rounded-xl bg-blue-50/60 text-blue-900 hover:bg-blue-100/70 transition-colors"
+                  className="flex items-center justify-between w-full p-3 rounded-xl bg-blue-50/60 text-blue-900 hover:bg-blue-100/70 transition-colors cursor-pointer"
                 >
                   <span className="flex items-center gap-3 font-semibold">
                     <Bell className="w-4 h-4 text-[#0052A5]" />
                     Alertas & Notificações
                   </span>
-                  {unreadCount > 0 ? (
+                  {effectiveUnreadCount > 0 ? (
                     <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
-                      {unreadCount} novas
+                      {effectiveUnreadCount} novas
                     </span>
                   ) : (
                     <ChevronRight className="w-4 h-4 text-blue-300" />

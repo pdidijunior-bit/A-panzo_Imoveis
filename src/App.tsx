@@ -20,9 +20,10 @@ import { RealTimeChat } from './components/RealTimeChat';
 import { AdminPanel } from './components/AdminPanel';
 import { Footer } from './components/Footer';
 import { LegalModal } from './components/LegalModals';
-import { FavoritesAndAlertsProvider } from './context/FavoritesAndAlertsContext';
+import { FavoritesAndAlertsProvider, useFavoritesAndAlerts } from './context/FavoritesAndAlertsContext';
 import { UserDashboardModal } from './components/UserDashboardModal';
 import { CreateAlertModal } from './components/CreateAlertModal';
+import { AuthModal } from './components/AuthModal';
 import {
   Building,
   Headphones,
@@ -534,19 +535,19 @@ function MainApp() {
         onSelectDealType={handleSelectDealType}
       />
 
-      {/* 5. Floating Real-Time Assistance Bubble (Only visible when chat is closed) */}
+      {/* 5. Floating Real-Time Assistance Pill (Discreet, prestigious, and softly shadowed) */}
       {!isChatOpen && activeView === 'home' && (
-        <aside aria-label="Apoio ao cliente em tempo real" className="fixed bottom-5 right-5 z-40 flex items-center gap-2">
+        <aside aria-label="Apoio ao cliente em tempo real" className="fixed bottom-6 right-6 z-40">
           <button
             onClick={() => setIsChatOpen(true)}
-            className="group flex items-center gap-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs uppercase tracking-wider py-3 px-4 rounded-full shadow-2xl transition-all duration-200 hover:scale-105 active:scale-95 border-2 border-slate-950"
-            title="Assistência em tempo real com consultores"
+            className="group flex items-center gap-2.5 bg-[#003366] hover:bg-[#0052A5] active:scale-95 text-white font-semibold text-xs py-2.5 px-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 border border-white/20 backdrop-blur-md cursor-pointer"
+            title="Assistência em tempo real com a equipa A.PANZO"
           >
-            <div className="relative">
-              <Headphones className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-slate-950 animate-pulse" />
+            <div className="relative flex items-center justify-center">
+              <Headphones className="w-4 h-4 text-emerald-400" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full ring-1 ring-[#003366] animate-pulse" />
             </div>
-            <span className="hidden sm:inline">Assistência Online</span>
+            <span className="font-medium tracking-wide">Assistência Online</span>
           </button>
         </aside>
       )}
@@ -612,8 +613,25 @@ function MainApp() {
         locations={locations}
         catalogProperties={properties}
       />
+
+      {/* 9. Global Auth Modal (Registro e Login com E-mail/Senha e Google) */}
+      <GlobalAuthModal />
     </div>
   </FavoritesAndAlertsProvider>
+  );
+}
+
+function GlobalAuthModal() {
+  const { isAuthModalOpen, setIsAuthModalOpen, authModalPrompt, authSuccessCallback } = useFavoritesAndAlerts();
+  return (
+    <AuthModal
+      isOpen={isAuthModalOpen}
+      onClose={() => setIsAuthModalOpen(false)}
+      promptText={authModalPrompt}
+      onSuccess={() => {
+        if (authSuccessCallback) authSuccessCallback();
+      }}
+    />
   );
 }
 

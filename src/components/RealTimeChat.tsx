@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { dbService } from '../lib/dbService';
 import { Message, Property } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface RealTimeChatProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
   agencyPhone,
   agencyWhatsapp,
 }) => {
+  const { currentUser } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [clientName, setClientName] = useState('');
@@ -44,21 +46,28 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
 
   // Initialize or restore visitor ID & visitor info
   useEffect(() => {
-    let vid = localStorage.getItem('alianca_visitor_id');
+    if (currentUser) {
+      setVisitorId(currentUser.uid);
+      setClientName(currentUser.displayName || currentUser.email || 'Cliente');
+      setIsRegistered(true);
+      return;
+    }
+
+    let vid = localStorage.getItem('apanzo_visitor_id') || localStorage.getItem('alianca_visitor_id');
     if (!vid) {
       vid = `visitor_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      localStorage.setItem('alianca_visitor_id', vid);
+      localStorage.setItem('apanzo_visitor_id', vid);
     }
     setVisitorId(vid);
 
-    const savedName = localStorage.getItem('alianca_visitor_name');
-    const savedPhone = localStorage.getItem('alianca_visitor_phone');
+    const savedName = localStorage.getItem('apanzo_visitor_name') || localStorage.getItem('alianca_visitor_name');
+    const savedPhone = localStorage.getItem('apanzo_visitor_phone') || localStorage.getItem('alianca_visitor_phone');
     if (savedName) {
       setClientName(savedName);
       if (savedPhone) setClientPhone(savedPhone);
       setIsRegistered(true);
     }
-  }, []);
+  }, [currentUser]);
 
   // Listen to messages in real time via Firestore onSnapshot
   useEffect(() => {
@@ -162,7 +171,7 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
 
           <div>
             <h3 className="font-bold text-sm text-white flex items-center gap-1.5 leading-tight">
-              Aliança Imobiliária
+              A.PANZO Imobiliária
             </h3>
             <p className="text-[11px] text-amber-400/90 font-medium">
               Apoio ao Cliente em Tempo Real

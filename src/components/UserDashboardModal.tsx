@@ -59,6 +59,7 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
     markAllNotificationsRead,
     deleteNotification,
     openCreateAlertModal,
+    openAuthModal,
   } = useFavoritesAndAlerts();
 
   if (!isUserDashboardOpen) return null;
@@ -152,10 +153,11 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
               ) : (
                 <button
                   id="dashboard-signin-btn"
-                  onClick={() => signInWithGoogle()}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition-all"
+                  onClick={() => openAuthModal('Crie a sua conta gratuita ou inicie sessão para sincronizar os seus imóveis favoritos.')}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer"
                 >
-                  Entrar com Google
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Criar Conta / Entrar</span>
                 </button>
               )}
 

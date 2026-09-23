@@ -37,6 +37,13 @@ interface FavoritesAndAlertsContextType {
   openCreateAlertModal: (prefill?: Partial<FilterState>) => void;
   prefilledAlertFilters: Partial<FilterState> | null;
 
+  // Auth Modal State
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  authModalPrompt: string;
+  openAuthModal: (prompt?: string, onSuccess?: () => void) => void;
+  authSuccessCallback: (() => void) | null;
+
   // Selected property for viewing
   inspectProperty: (property: Property) => void;
   selectedPropertyForInspection: Property | null;
@@ -94,6 +101,21 @@ export const FavoritesAndAlertsProvider: React.FC<{
   const [isCreateAlertModalOpen, setIsCreateAlertModalOpen] = useState<boolean>(false);
   const [prefilledAlertFilters, setPrefilledAlertFilters] = useState<Partial<FilterState> | null>(null);
   const [selectedPropertyForInspection, setSelectedPropertyForInspection] = useState<Property | null>(null);
+
+  // Auth modal trigger state
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authModalPrompt, setAuthModalPrompt] = useState<string>('');
+  const [authSuccessCallback, setAuthSuccessCallback] = useState<(() => void) | null>(null);
+
+  const openAuthModal = (prompt?: string, onSuccess?: () => void) => {
+    setAuthModalPrompt(prompt || '');
+    if (onSuccess) {
+      setAuthSuccessCallback(() => onSuccess);
+    } else {
+      setAuthSuccessCallback(null);
+    }
+    setIsAuthModalOpen(true);
+  };
 
   // Sync to localStorage
   useEffect(() => {
@@ -248,6 +270,9 @@ export const FavoritesAndAlertsProvider: React.FC<{
         setLocalFavoriteIds((prev) => prev.filter((id) => id !== property.id));
       } else {
         setLocalFavoriteIds((prev) => [...prev, property.id]);
+        openAuthModal(
+          'Para manter este imóvel guardado na sua conta e aceder em qualquer dispositivo móvel ou computador, crie a sua conta gratuita.'
+        );
       }
     }
   };
@@ -400,6 +425,11 @@ export const FavoritesAndAlertsProvider: React.FC<{
         setIsCreateAlertModalOpen,
         openCreateAlertModal,
         prefilledAlertFilters,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        authModalPrompt,
+        openAuthModal,
+        authSuccessCallback,
         inspectProperty,
         selectedPropertyForInspection,
         clearInspectedProperty,

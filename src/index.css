@@ -1,16 +1,28 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light only;
+  supported-color-schemes: light;
   --brand-blue: #0052A5;
   --brand-navy: #003366;
   --brand-blue-light: #EBF3FB;
   --brand-accent: #1E6BB8;
+  --brand-gold: #C59B27;
+}
+
+html {
+  color-scheme: light only;
+  background-color: #FFFFFF;
 }
 
 body {
   background-color: #FFFFFF;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   color: #0F172A;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  forced-color-adjust: none;
 }
 
 .font-brand-display {

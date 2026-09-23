@@ -1,5 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut as fbSignOut } from 'firebase/auth';
+import {
+  User,
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut as fbSignOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
@@ -9,6 +18,8 @@ interface AuthContextType {
   isMasterAdmin: boolean;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
+  signUpWithEmail: (name: string, email: string, pass: string) => Promise<User>;
+  signInWithEmail: (email: string, pass: string) => Promise<User>;
   loginWithMasterKey: (key: string) => boolean;
   updateMasterKey: (newKey: string) => boolean;
   signOut: () => Promise<void>;
@@ -22,6 +33,8 @@ const AuthContext = createContext<AuthContextType>({
   isMasterAdmin: false,
   loading: true,
   signInWithGoogle: async () => {},
+  signUpWithEmail: async () => { throw new Error('Not implemented'); },
+  signInWithEmail: async () => { throw new Error('Not implemented'); },
   loginWithMasterKey: () => false,
   updateMasterKey: () => false,
   signOut: async () => {},
@@ -135,7 +148,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithPopup(auth, provider);
+      const res = await signInWithPopup(auth, provider);
+      if (res.user) {
+        // Record user profile in Firestore
+        await setDoc(doc(db, 'users', res.user.uid), {
+          uid: res.user.uid,
+          displayName: res.user.displayName || 'Utilizador',
+          email: res.user.email || '',
+          photoURL: res.user.photoURL || '',
+          role: 'client',
+          lastLoginAt: new Date().toISOString(),
+        }, { merge: true }).catch(() => {});
+      }
     } catch (err: any) {
       console.error('Falha no login com Google:', err);
       if (err.code === 'auth/popup-closed-by-user') {
@@ -146,6 +170,105 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthError(err.message || 'Falha ao autenticar.');
       }
       throw err;
+    }
+  };
+
+  const signUpWithEmail = async (name: string, email: string, pass: string): Promise<User> => {
+    setAuthError(null);
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      const msg = 'Por favor indique o seu nome completo.';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      const msg = 'Por favor forneça um endereço de e-mail válido.';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+    if (!pass || pass.length < 6) {
+      const msg = 'A senha de acesso deve ter pelo menos 6 caracteres.';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, trimmedEmail, pass);
+      const user = credential.user;
+
+      // Update Firebase Auth profile
+      await updateProfile(user, { displayName: trimmedName });
+
+      // Save user in Firestore
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        displayName: trimmedName,
+        email: trimmedEmail,
+        role: 'client',
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+      }, { merge: true }).catch(() => {});
+
+      setCurrentUser({ ...user, displayName: trimmedName } as User);
+      return user;
+    } catch (err: any) {
+      let friendlyMsg = 'Erro ao criar conta. Tente novamente.';
+      if (err.code === 'auth/email-already-in-use') {
+        friendlyMsg = 'Este e-mail já está associado a uma conta. Faça login.';
+      } else if (err.code === 'auth/invalid-email') {
+        friendlyMsg = 'Endereço de e-mail inválido.';
+      } else if (err.code === 'auth/weak-password') {
+        friendlyMsg = 'A senha é muito fraca. Utilize pelo menos 6 caracteres.';
+      } else if (err.message) {
+        friendlyMsg = err.message;
+      }
+      setAuthError(friendlyMsg);
+      throw new Error(friendlyMsg);
+    }
+  };
+
+  const signInWithEmail = async (email: string, pass: string): Promise<User> => {
+    setAuthError(null);
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+      const msg = 'Por favor indique o seu e-mail.';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+    if (!pass) {
+      const msg = 'Por favor introduza a sua senha.';
+      setAuthError(msg);
+      throw new Error(msg);
+    }
+
+    try {
+      const credential = await signInWithEmailAndPassword(auth, trimmedEmail, pass);
+      const user = credential.user;
+
+      // Update last login
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        lastLoginAt: new Date().toISOString(),
+      }, { merge: true }).catch(() => {});
+
+      return user;
+    } catch (err: any) {
+      let friendlyMsg = 'Erro ao iniciar sessão. Verifique os seus dados.';
+      if (
+        err.code === 'auth/user-not-found' ||
+        err.code === 'auth/wrong-password' ||
+        err.code === 'auth/invalid-credential'
+      ) {
+        friendlyMsg = 'E-mail ou senha incorretos. Por favor verifique os dados.';
+      } else if (err.code === 'auth/too-many-requests') {
+        friendlyMsg = 'Muitas tentativas falhadas. Aguarde alguns minutos ou redefina a senha.';
+      } else if (err.message) {
+        friendlyMsg = err.message;
+      }
+      setAuthError(friendlyMsg);
+      throw new Error(friendlyMsg);
     }
   };
 
@@ -175,6 +298,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isMasterAdmin,
         loading,
         signInWithGoogle,
+        signUpWithEmail,
+        signInWithEmail,
         loginWithMasterKey,
         updateMasterKey,
         signOut,
