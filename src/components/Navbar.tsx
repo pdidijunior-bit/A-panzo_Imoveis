@@ -75,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const cleanWhatsapp = whatsapp.replace(/[^0-9]/g, '');
+  const cleanWhatsapp = (whatsapp || '+244 925 883 080').replace(/[^0-9]/g, '');
 
   const closeMenu = () => setIsMenuOpen(false);
 

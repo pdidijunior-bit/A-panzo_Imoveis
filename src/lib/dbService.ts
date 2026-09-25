@@ -21,8 +21,10 @@ import {
   Favorite,
   PropertyAlert,
   AlertNotification,
+  DealType,
 } from '../types';
 import { DEFAULT_CATEGORIES, ANGOLA_LOCATIONS, DEFAULT_SITE_SETTINGS } from './defaultData';
+import { normalizeCurrency } from './formatters';
 
 /**
  * Recursively strips any keys whose value is undefined, which Firestore setDoc/updateDoc strictly rejects.
@@ -122,10 +124,47 @@ export const dbService = {
     return onSnapshot(
       q,
       (snapshot) => {
-        const items = snapshot.docs.map((d) => ({
-          ...d.data(),
-          id: d.id,
-        })) as Property[];
+        const items = snapshot.docs.map((d) => {
+          const data = d.data();
+          const currency = normalizeCurrency(data.currency);
+          const rawDeal = data.dealType;
+          const dealType: DealType =
+            rawDeal === 'venda' || rawDeal === 'arrendamento' || rawDeal === 'trespasse'
+              ? rawDeal
+              : 'venda';
+
+          const sanitized: Property = {
+            id: d.id,
+            title: data.title || 'Imóvel sem título',
+            code: data.code || `ALI-${String(d.id).slice(-4).toUpperCase()}`,
+            dealType,
+            category: data.category || 'apartamento',
+            categoryName: data.categoryName || 'Apartamento',
+            price: typeof data.price === 'number' && !isNaN(data.price) ? data.price : 0,
+            currency: currency as any,
+            isNegotiable: Boolean(data.isNegotiable),
+            province: data.province || 'Luanda',
+            municipality: data.municipality || 'Luanda',
+            neighborhood: data.neighborhood || '',
+            addressReference: data.addressReference || '',
+            area: typeof data.area === 'number' ? data.area : 0,
+            bedrooms: typeof data.bedrooms === 'number' ? data.bedrooms : 0,
+            bathrooms: typeof data.bathrooms === 'number' ? data.bathrooms : 0,
+            parkingSpaces: typeof data.parkingSpaces === 'number' ? data.parkingSpaces : 0,
+            features: Array.isArray(data.features) ? data.features : [],
+            description: data.description || '',
+            condition: data.condition || 'usado',
+            status: data.status || 'disponivel',
+            isFeatured: Boolean(data.isFeatured || data.featured),
+            images: Array.isArray(data.images) && data.images.length > 0 ? data.images : [],
+            videoUrl: data.videoUrl || null,
+            viewsCount: typeof data.viewsCount === 'number' ? data.viewsCount : 0,
+            createdAt: data.createdAt ? String(data.createdAt) : new Date().toISOString(),
+            updatedAt: data.updatedAt ? String(data.updatedAt) : new Date().toISOString(),
+            publishedBy: data.publishedBy || '',
+          };
+          return sanitized;
+        }) as Property[];
         callback(items);
       },
       (error) => {
@@ -138,8 +177,10 @@ export const dbService = {
   async saveProperty(property: Property): Promise<void> {
     const path = `properties/${property.id}`;
     try {
+      const currency = normalizeCurrency(property.currency);
       const sanitized = cleanFirestoreData({
         ...property,
+        currency,
         videoUrl: property.videoUrl || null,
         updatedAt: new Date().toISOString(),
       });
@@ -671,7 +712,7 @@ export const dbService = {
 
   // --- MATCHING HELPER ---
   matchesAlert(property: Property, alert: PropertyAlert): boolean {
-    if (!alert.active) return false;
+    if (!alert || !alert.active || !property) return false;
 
     // Deal type check
     if (alert.dealType && alert.dealType !== 'todos') {
@@ -684,43 +725,49 @@ export const dbService = {
     }
 
     // Province check
-    if (alert.province) {
-      if (property.province?.toLowerCase() !== alert.province.toLowerCase()) return false;
+    if (alert.province && alert.province.trim()) {
+      const propProv = (property.province || '').toLowerCase().trim();
+      const alertProv = alert.province.toLowerCase().trim();
+      if (propProv !== alertProv) return false;
     }
 
     // Municipality check
-    if (alert.municipality) {
-      if (!property.municipality?.toLowerCase().includes(alert.municipality.toLowerCase())) {
+    if (alert.municipality && alert.municipality.trim()) {
+      const propMuni = (property.municipality || '').toLowerCase().trim();
+      const alertMuni = alert.municipality.toLowerCase().trim();
+      if (!propMuni.includes(alertMuni)) {
         return false;
       }
     }
 
     // Bedrooms check
     if (alert.bedrooms && alert.bedrooms !== 'todos') {
+      const propBeds = Number(property.bedrooms) || 0;
       if (alert.bedrooms === '5+') {
-        if (property.bedrooms < 5) return false;
+        if (propBeds < 5) return false;
       } else {
         const targetBeds = parseInt(alert.bedrooms, 10);
-        if (property.bedrooms !== targetBeds) return false;
+        if (propBeds !== targetBeds) return false;
       }
     }
 
     // Price range check
+    const propPrice = typeof property.price === 'number' ? property.price : 0;
     if (typeof alert.minPrice === 'number' && alert.minPrice > 0) {
-      if (property.price < alert.minPrice) return false;
+      if (propPrice < alert.minPrice) return false;
     }
     if (typeof alert.maxPrice === 'number' && alert.maxPrice > 0) {
-      if (property.price > alert.maxPrice) return false;
+      if (propPrice > alert.maxPrice) return false;
     }
 
     // Keyword search
     if (alert.keyword && alert.keyword.trim()) {
       const q = alert.keyword.toLowerCase().trim();
       const match =
-        property.title.toLowerCase().includes(q) ||
-        property.code.toLowerCase().includes(q) ||
-        property.neighborhood?.toLowerCase().includes(q) ||
-        property.description?.toLowerCase().includes(q);
+        (property.title || '').toLowerCase().includes(q) ||
+        (property.code || '').toLowerCase().includes(q) ||
+        (property.neighborhood || '').toLowerCase().includes(q) ||
+        (property.description || '').toLowerCase().includes(q);
       if (!match) return false;
     }
 

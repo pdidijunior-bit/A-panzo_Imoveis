@@ -108,8 +108,9 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
       ? { id: attachedProperty.id, title: attachedProperty.title }
       : undefined;
 
+    const attachedCode = attachedProperty.code || String(attachedProperty.id || '').slice(0, 6).toUpperCase();
     const welcomeText = attachedProperty
-      ? `Olá! Tenho interesse no imóvel "${attachedProperty.title}" (Cód: ${attachedProperty.code || attachedProperty.id.slice(0, 6).toUpperCase()}).`
+      ? `Olá! Tenho interesse no imóvel "${attachedProperty.title || 'Imóvel'}" (Cód: ${attachedCode}).`
       : 'Olá! Gostaria de falar com um consultor da A.PANZO Imobiliária.';
 
     dbService.sendClientMessage(
@@ -152,9 +153,9 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
     }
   };
 
-  const cleanWhatsapp = agencyWhatsapp.replace(/[^0-9]/g, '');
-
   if (!isOpen) return null;
+
+  const cleanWhatsapp = (agencyWhatsapp || '+244 925 883 080').replace(/[^0-9]/g, '');
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-full max-w-sm sm:max-w-md bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[520px] max-h-[85vh] animate-in slide-in-from-bottom-5 duration-200">

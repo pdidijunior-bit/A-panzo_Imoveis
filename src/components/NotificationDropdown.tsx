@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { Bell, CheckCheck, Trash2, ChevronRight, Sparkles, MapPin } from 'lucide-react';
 import { useFavoritesAndAlerts } from '../context/FavoritesAndAlertsContext';
 import { Property } from '../types';
+import { formatNumber } from '../lib/formatters';
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -53,10 +54,16 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('pt-AO', {
-      style: 'decimal',
-      maximumFractionDigits: 0,
-    }).format(price);
+    return formatNumber(price);
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-AO');
+    } catch {
+      return '';
+    }
   };
 
   return (
@@ -137,7 +144,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                   <span className="font-bold text-amber-600 dark:text-amber-400 truncate">
                     Alerta: {notif.alertName}
                   </span>
-                  <span>{new Date(notif.createdAt).toLocaleDateString('pt-AO')}</span>
+                  <span>{formatDate(notif.createdAt)}</span>
                 </div>
                 <h5 className="text-xs font-bold text-slate-900 dark:text-white truncate">
                   {notif.propertyTitle}

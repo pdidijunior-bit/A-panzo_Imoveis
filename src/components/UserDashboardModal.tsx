@@ -24,6 +24,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useFavoritesAndAlerts } from '../context/FavoritesAndAlertsContext';
 import { Property, Category, LocationConfig } from '../types';
+import { formatCurrency, formatNumber } from '../lib/formatters';
 
 interface UserDashboardModalProps {
   catalogProperties: Property[];
@@ -69,13 +70,10 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
     favoriteIds.includes(p.id)
   );
 
-  const cleanWhatsappNumber = whatsappNumber.replace(/[^0-9]/g, '');
+  const cleanWhatsappNumber = (whatsappNumber || '+244 925 883 080').replace(/[^0-9]/g, '');
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('pt-AO', {
-      style: 'decimal',
-      maximumFractionDigits: 0,
-    }).format(price);
+    return formatNumber(price);
   };
 
   const handleOpenProperty = (property: Property) => {
@@ -315,7 +313,7 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
                           </h4>
 
                           <div className="text-base font-extrabold text-amber-600 dark:text-amber-400 mt-1">
-                            {formatPrice(prop.price)} {prop.currency}
+                            {formatCurrency(prop.price, prop.currency)}
                           </div>
 
                           <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400 mt-2">
@@ -347,7 +345,7 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
                           <div className="flex items-center gap-1.5">
                             <a
                               href={`https://wa.me/${cleanWhatsappNumber}?text=${encodeURIComponent(
-                                `Olá Aliança Imobiliária! Tenho grande interesse no meu imóvel favorito #${prop.code}: "${prop.title}" (${formatPrice(prop.price)} ${prop.currency}). Gostaria de agendar uma visita!`
+                                `Olá A.PANZO Imobiliária! Tenho grande interesse no meu imóvel favorito #${prop.code || String(prop.id || '').slice(0, 6).toUpperCase()}: "${prop.title || 'Imóvel'}" (${formatCurrency(prop.price, prop.currency)}). Gostaria de agendar uma visita!`
                               )}`}
                               target="_blank"
                               rel="noreferrer"
@@ -420,15 +418,16 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
               ) : (
                 <div className="space-y-3">
                   {alerts.map((alert) => {
-                    const matchesCount = catalogProperties.filter((p) => {
+                    const matchesCount = (catalogProperties || []).filter((p) => {
+                      if (!p) return false;
                       return (
                         (!alert.dealType || alert.dealType === 'todos' || p.dealType === alert.dealType) &&
                         (!alert.category || p.category === alert.category) &&
-                        (!alert.province || p.province?.toLowerCase() === alert.province.toLowerCase()) &&
-                        (!alert.municipality || p.municipality?.toLowerCase().includes(alert.municipality.toLowerCase())) &&
-                        (!alert.bedrooms || alert.bedrooms === 'todos' || (alert.bedrooms === '5+' ? p.bedrooms >= 5 : p.bedrooms === parseInt(alert.bedrooms, 10))) &&
-                        (!alert.minPrice || p.price >= Number(alert.minPrice)) &&
-                        (!alert.maxPrice || p.price <= Number(alert.maxPrice))
+                        (!alert.province || (p.province || '').toLowerCase() === (alert.province || '').toLowerCase()) &&
+                        (!alert.municipality || (p.municipality || '').toLowerCase().includes((alert.municipality || '').toLowerCase())) &&
+                        (!alert.bedrooms || alert.bedrooms === 'todos' || (alert.bedrooms === '5+' ? (p.bedrooms || 0) >= 5 : p.bedrooms === parseInt(alert.bedrooms, 10))) &&
+                        (!alert.minPrice || (p.price || 0) >= Number(alert.minPrice)) &&
+                        (!alert.maxPrice || (p.price || 0) <= Number(alert.maxPrice))
                       );
                     }).length;
 

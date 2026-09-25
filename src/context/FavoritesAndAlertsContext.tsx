@@ -212,6 +212,7 @@ export const FavoritesAndAlertsProvider: React.FC<{
     // Check each active alert against properties
     activeAlertList.forEach((alert) => {
       catalogProperties.forEach((property) => {
+        if (!property) return;
         if (dbService.matchesAlert(property, alert)) {
           // Check if notification already exists for this alert + property
           const notifKey = `notif_${alert.id}_${property.id}`;
@@ -224,14 +225,14 @@ export const FavoritesAndAlertsProvider: React.FC<{
               id: notifKey,
               userId: currentUser ? currentUser.uid : 'guest',
               alertId: alert.id,
-              alertName: alert.name,
+              alertName: alert.name || 'Alerta',
               propertyId: property.id,
-              propertyTitle: property.title,
-              propertyCode: property.code,
-              propertyPrice: property.price,
+              propertyTitle: property.title || 'Imóvel',
+              propertyCode: property.code || '',
+              propertyPrice: typeof property.price === 'number' ? property.price : 0,
               propertyImage: property.images && property.images[0] ? property.images[0] : '',
-              dealType: property.dealType,
-              location: `${property.municipality}, ${property.province}`,
+              dealType: property.dealType || 'venda',
+              location: `${property.municipality || 'Luanda'}, ${property.province || 'Luanda'}`,
               read: false,
               createdAt: new Date().toISOString(),
             };
@@ -248,7 +249,7 @@ export const FavoritesAndAlertsProvider: React.FC<{
         }
       });
     });
-  }, [catalogProperties, activeAlerts, activeNotifications, currentUser]);
+  }, [catalogProperties, activeAlerts, currentUser]);
 
   const isFavorite = (propertyId: string) => {
     return activeFavoriteIds.includes(propertyId);
@@ -298,14 +299,14 @@ export const FavoritesAndAlertsProvider: React.FC<{
           id: `notif_${newAlert.id}_${property.id}`,
           userId: currentUser ? currentUser.uid : 'guest',
           alertId: newAlert.id,
-          alertName: newAlert.name,
+          alertName: newAlert.name || 'Alerta',
           propertyId: property.id,
-          propertyTitle: property.title,
-          propertyCode: property.code,
-          propertyPrice: property.price,
+          propertyTitle: property.title || 'Imóvel',
+          propertyCode: property.code || '',
+          propertyPrice: typeof property.price === 'number' ? property.price : 0,
           propertyImage: property.images?.[0] || '',
-          dealType: property.dealType,
-          location: `${property.municipality}, ${property.province}`,
+          dealType: property.dealType || 'venda',
+          location: `${property.municipality || 'Luanda'}, ${property.province || 'Luanda'}`,
           read: false,
           createdAt: new Date().toISOString(),
         };

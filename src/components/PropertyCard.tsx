@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Property } from '../types';
 import { useFavoritesAndAlerts } from '../context/FavoritesAndAlertsContext';
+import { formatCurrency } from '../lib/formatters';
 
 interface PropertyCardProps {
   property: Property;
@@ -36,19 +37,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   };
 
   const formatKz = (val: number) => {
-    return new Intl.NumberFormat('pt-AO', {
-      style: 'currency',
-      currency: property.currency || 'AOA',
-      maximumFractionDigits: 0,
-    })
-      .format(val)
-      .replace('AOA', 'Kz');
+    return formatCurrency(val, property?.currency);
   };
 
-  const cleanWhatsapp = agencyWhatsapp.replace(/[^0-9]/g, '');
+  const cleanWhatsapp = (agencyWhatsapp || '+244 925 883 080').replace(/[^0-9]/g, '');
+  const propCode = property.code || String(property.id || '').slice(0, 6).toUpperCase();
 
   const whatsappMessage = encodeURIComponent(
-    `Olá A.PANZO Imobiliária! Tenho interesse no imóvel "${property.title}" (Cód: ${property.code || property.id.slice(0, 6).toUpperCase()}) anunciado por ${formatKz(property.price)}${property.dealType === 'arrendamento' ? '/mês' : ''}. Gostaria de agendar uma visita ou obter mais informações.`
+    `Olá A.PANZO Imobiliária! Tenho interesse no imóvel "${property.title || 'Imóvel'}" (Cód: ${propCode}) anunciado por ${formatKz(property.price)}${property.dealType === 'arrendamento' ? '/mês' : ''}. Gostaria de agendar uma visita ou obter mais informações.`
   );
 
   const coverImage =
@@ -108,10 +104,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         {/* Bottom Badges on Image (Code & Status) */}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white">
           <span className="bg-slate-950/80 backdrop-blur-xs px-2.5 py-0.5 rounded-md font-mono text-[11px] border border-white/10">
-            {property.code ? `#${property.code}` : `#${property.id.slice(0, 6).toUpperCase()}`}
+            #{propCode}
           </span>
 
-          {property.featured && (
+          {property.isFeatured && (
             <span className="bg-[#0052A5] text-white text-[10px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-md shadow-xs">
               Destaque
             </span>

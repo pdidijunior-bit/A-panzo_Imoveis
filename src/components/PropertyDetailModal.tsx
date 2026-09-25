@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Property } from '../types';
 import { useFavoritesAndAlerts } from '../context/FavoritesAndAlertsContext';
+import { formatCurrency } from '../lib/formatters';
 
 interface PropertyDetailModalProps {
   property: Property | null;
@@ -48,19 +49,14 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
   const favorited = isFavorite(property.id);
 
   const formatKz = (val: number) => {
-    return new Intl.NumberFormat('pt-AO', {
-      style: 'currency',
-      currency: property.currency || 'AOA',
-      maximumFractionDigits: 0,
-    })
-      .format(val)
-      .replace('AOA', 'Kz');
+    return formatCurrency(val, property?.currency);
   };
 
-  const cleanWhatsapp = agencyWhatsapp.replace(/[^0-9]/g, '');
+  const cleanWhatsapp = (agencyWhatsapp || '+244 925 883 080').replace(/[^0-9]/g, '');
+  const propCode = property.code || String(property.id || '').slice(0, 6).toUpperCase();
 
   const whatsappMessage = encodeURIComponent(
-    `Olá A.PANZO Imobiliária! Tenho interesse no imóvel "${property.title}" (Cód: ${property.code || property.id.slice(0, 6).toUpperCase()}) em ${property.municipality}, ${property.province}. Preço: ${formatKz(property.price)}${property.dealType === 'arrendamento' ? '/mês' : ''}. Desejo mais informações e agendamento de visita.`
+    `Olá A.PANZO Imobiliária! Tenho interesse no imóvel "${property.title || 'Imóvel'}" (Cód: ${propCode}) em ${property.municipality || 'Luanda'}, ${property.province || 'Luanda'}. Preço: ${formatKz(property.price)}${property.dealType === 'arrendamento' ? '/mês' : ''}. Desejo mais informações e agendamento de visita.`
   );
 
   const images = property.images && property.images.length > 0
@@ -82,7 +78,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 sticky top-0 z-20">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
-              {property.code || property.id.slice(0, 6).toUpperCase()}
+              {propCode}
             </span>
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               {property.dealType === 'venda'

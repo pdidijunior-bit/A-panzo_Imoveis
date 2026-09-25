@@ -16,8 +16,8 @@ export const MarqueeBanner: React.FC<MarqueeBannerProps> = ({
 }) => {
   if (!visible || !notice) return null;
 
-  const cleanPhone = phone.replace(/[^0-9]/g, '');
-  const cleanWhatsapp = whatsapp.replace(/[^0-9]/g, '');
+  const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+  const cleanWhatsapp = (whatsapp || '').replace(/[^0-9]/g, '');
 
   return (
     <aside

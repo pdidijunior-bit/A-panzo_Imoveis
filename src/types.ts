@@ -12,7 +12,7 @@ export interface Property {
   category: string;
   categoryName: string;
   price: number;
-  currency: 'AOA' | 'USD';
+  currency: 'AOA' | 'USD' | 'EUR';
   isNegotiable: boolean;
   province: string;
   municipality: string;

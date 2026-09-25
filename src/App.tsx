@@ -112,7 +112,8 @@ function MainApp() {
 
   // Filter properties in memory
   const filteredProperties = useMemo(() => {
-    return properties.filter((item) => {
+    return (properties || []).filter((item) => {
+      if (!item) return false;
       // Deal type
       if (filters.dealType !== 'todos' && item.dealType !== filters.dealType) {
         return false;
@@ -122,39 +123,42 @@ function MainApp() {
         return false;
       }
       // Province
-      if (filters.province && item.province.toLowerCase() !== filters.province.toLowerCase()) {
-        return false;
+      if (filters.province) {
+        const itemProv = (item.province || '').toLowerCase();
+        const filterProv = filters.province.toLowerCase();
+        if (itemProv !== filterProv) return false;
       }
       // Municipality
-      if (
-        filters.municipality &&
-        item.municipality.toLowerCase() !== filters.municipality.toLowerCase()
-      ) {
-        return false;
+      if (filters.municipality) {
+        const itemMuni = (item.municipality || '').toLowerCase();
+        const filterMuni = filters.municipality.toLowerCase();
+        if (itemMuni !== filterMuni) return false;
       }
       // Bedrooms
       if (filters.bedrooms !== 'todos') {
+        const itemBeds = typeof item.bedrooms === 'number' ? item.bedrooms : 0;
         if (filters.bedrooms === '5+') {
-          if ((item.bedrooms || 0) < 5) return false;
+          if (itemBeds < 5) return false;
         } else {
-          if (item.bedrooms !== Number(filters.bedrooms)) return false;
+          if (itemBeds !== Number(filters.bedrooms)) return false;
         }
       }
       // Min Price
-      if (filters.minPrice !== '' && item.price < Number(filters.minPrice)) {
+      const itemPrice = typeof item.price === 'number' ? item.price : 0;
+      if (filters.minPrice !== '' && itemPrice < Number(filters.minPrice)) {
         return false;
       }
       // Max Price
-      if (filters.maxPrice !== '' && item.price > Number(filters.maxPrice)) {
+      if (filters.maxPrice !== '' && itemPrice > Number(filters.maxPrice)) {
         return false;
       }
       // Keyword (title, code, description, neighborhood)
       if (filters.keyword.trim()) {
         const query = filters.keyword.toLowerCase().trim();
-        const matchesTitle = item.title?.toLowerCase().includes(query);
-        const matchesCode = item.code?.toLowerCase().includes(query);
-        const matchesDesc = item.description?.toLowerCase().includes(query);
-        const matchesNeighbor = item.neighborhood?.toLowerCase().includes(query);
+        const matchesTitle = (item.title || '').toLowerCase().includes(query);
+        const matchesCode = (item.code || '').toLowerCase().includes(query);
+        const matchesDesc = (item.description || '').toLowerCase().includes(query);
+        const matchesNeighbor = (item.neighborhood || '').toLowerCase().includes(query);
         if (!matchesTitle && !matchesCode && !matchesDesc && !matchesNeighbor) {
           return false;
         }
@@ -167,13 +171,19 @@ function MainApp() {
   const sortedProperties = useMemo(() => {
     const list = [...filteredProperties];
     if (sortOption === 'price_asc') {
-      return list.sort((a, b) => a.price - b.price);
+      return list.sort((a, b) => (a.price || 0) - (b.price || 0));
     }
     if (sortOption === 'price_desc') {
-      return list.sort((a, b) => b.price - a.price);
+      return list.sort((a, b) => (b.price || 0) - (a.price || 0));
     }
     // Default 'recent'
-    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return list.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      const validA = isNaN(timeA) ? 0 : timeA;
+      const validB = isNaN(timeB) ? 0 : timeB;
+      return validB - validA;
+    });
   }, [filteredProperties, sortOption]);
 
   const handleFilterChange = (newValues: Partial<FilterState>) => {
@@ -209,24 +219,25 @@ function MainApp() {
     }
   };
 
-  const cleanWhatsapp = (settings.whatsapp || '+244924875869').replace(/[^0-9]/g, '');
+  const cleanWhatsapp = (settings?.whatsapp || '+244 925 883 080').replace(/[^0-9]/g, '');
 
   return (
     <FavoritesAndAlertsProvider catalogProperties={properties}>
       <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-brand-body selection:bg-amber-400 selection:text-slate-950">
         {/* 1. Notice / Eye-Catching Marquee Banner */}
         <MarqueeBanner
-          notice={settings.marqueeNotice}
-          phone={settings.phone}
-          whatsapp={settings.whatsapp}
+          notice={settings.marqueeNotice || ''}
+          phone={settings.phone || '+244 925 883 080'}
+          whatsapp={settings.whatsapp || '+244 925 883 080'}
           visible={settings.showMarquee}
         />
 
         {/* 2. Top Modern Navbar with Sliding Drawer for Mobile/Tablet */}
         <Navbar
           logoUrl={settings.logoUrl}
-          phone={settings.phone}
-          whatsapp={settings.whatsapp}
+          phone={settings.phone || '+244 925 883 080'}
+          whatsapp={settings.whatsapp || '+244 925 883 080'}
+          isAdmin={isAdmin}
           catalogProperties={properties}
           onOpenAbout={() => setIsAboutOpen(true)}
           onOpenChat={() => setIsChatOpen(true)}

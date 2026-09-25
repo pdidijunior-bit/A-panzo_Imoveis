@@ -46,6 +46,7 @@ import {
   PropertyCondition,
 } from '../types';
 import { COMMON_FEATURES_LIST } from '../lib/defaultData';
+import { formatCurrency, normalizeCurrency } from '../lib/formatters';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -257,7 +258,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setPropDealType(prop.dealType);
     setPropCategory(prop.category);
     setPropPrice(prop.price);
-    setPropCurrency(prop.currency || 'AOA');
+    setPropCurrency(normalizeCurrency(prop.currency));
     setPropIsNegotiable(prop.isNegotiable || false);
     setPropProvince(prop.province);
     setPropMunicipality(prop.municipality);
@@ -975,13 +976,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           {prop.municipality}, {prop.province}
                         </p>
                         <p className="text-sm font-extrabold text-slate-950 font-mono mt-2">
-                          {new Intl.NumberFormat('pt-AO', {
-                            style: 'currency',
-                            currency: prop.currency || 'AOA',
-                            maximumFractionDigits: 0,
-                          })
-                            .format(prop.price)
-                            .replace('AOA', 'Kz')}
+                          {formatCurrency(prop.price, prop.currency)}
                         </p>
                       </div>
 

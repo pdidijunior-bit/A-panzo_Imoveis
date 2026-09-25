@@ -3,6 +3,7 @@ import { X, Bell, Check, Sparkles, Filter, AlertCircle, ArrowRight } from 'lucid
 import { Category, LocationConfig, Property } from '../types';
 import { useFavoritesAndAlerts } from '../context/FavoritesAndAlertsContext';
 import { dbService } from '../lib/dbService';
+import { formatNumber } from '../lib/formatters';
 
 interface CreateAlertModalProps {
   categories: Category[];
@@ -74,7 +75,7 @@ export const CreateAlertModal: React.FC<CreateAlertModalProps> = ({
         parts.push(`em ${province}`);
       }
       if (maxPrice) {
-        parts.push(`até ${Number(maxPrice).toLocaleString('pt-AO')} Kz`);
+        parts.push(`até ${formatNumber(Number(maxPrice))} Kz`);
       }
       setName(parts.length > 0 ? parts.join(' • ') : 'Alerta Personalizado');
     }
@@ -83,7 +84,7 @@ export const CreateAlertModal: React.FC<CreateAlertModalProps> = ({
   if (!isCreateAlertModalOpen) return null;
 
   // Calculate live matching count in current catalog
-  const matchingPropertiesCount = catalogProperties.filter((p) => {
+  const matchingPropertiesCount = (catalogProperties || []).filter((p) => {
     return dbService.matchesAlert(p, {
       id: 'temp',
       userId: 'temp',
@@ -103,7 +104,7 @@ export const CreateAlertModal: React.FC<CreateAlertModalProps> = ({
   }).length;
 
   const currentMunicipalities =
-    locations.find((l) => l.province.toLowerCase() === province.toLowerCase())
+    (locations || []).find((l) => (l.province || '').toLowerCase() === (province || '').toLowerCase())
       ?.municipalities || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
