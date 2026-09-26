@@ -1,0 +1,73 @@
+# robots.txt - A.PANZO Imobiliária
+# Arquivo de configuração para otimizar o rastreamento de motores de busca
+
+# Regras gerais para todos os bots
+User-agent: *
+Allow: /
+Disallow: /node_modules/
+Disallow: /src/
+Disallow: /.git/
+Disallow: /.env
+Disallow: /.env.local
+Disallow: /dist/
+Disallow: /build/
+Disallow: /*.map
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /admin/
+Disallow: /private/
+
+# Permitir rastreamento de ativos estáticos
+Allow: /public/
+Allow: *.js
+Allow: *.css
+Allow: *.png
+Allow: *.jpg
+Allow: *.jpeg
+Allow: *.gif
+Allow: *.svg
+Allow: *.webp
+Allow: *.woff
+Allow: *.woff2
+Allow: *.ttf
+
+# Configuração específica para Google
+User-agent: Googlebot
+Allow: /
+Disallow: /node_modules/
+Disallow: /src/
+Disallow: /.git/
+Crawl-delay: 0
+
+# Configuração específica para Bing
+User-agent: Bingbot
+Allow: /
+Disallow: /node_modules/
+Disallow: /src/
+Disallow: /.git/
+Crawl-delay: 1
+
+# Bloquear bots maliciosos e desnecessários
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# Sitemap - Será criado posteriormente
+# Sitemap: https://anpanzo.com/sitemap.xml
+
+# Tempo de espera entre requisições (em segundos)
+Crawl-delay: 1
+Request-rate: 1/1s
+
+# Comentários úteis
+# Allow: Permite rastreamento
+# Disallow: Bloqueia rastreamento
+# Crawl-delay: Intervalo mínimo entre requisições (em segundos)
