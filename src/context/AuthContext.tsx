@@ -3,6 +3,7 @@ import {
   User,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
   GoogleAuthProvider,
   signOut as fbSignOut,
   createUserWithEmailAndPassword,
@@ -11,15 +12,32 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import { dbService } from '../lib/dbService';
+import { PartnerProfile } from '../types';
+import { sanitizeText, sanitizeEmail, sanitizePhone } from '../lib/sanitizer';
 
 interface AuthContextType {
   currentUser: User | null;
   isAdmin: boolean;
   isMasterAdmin: boolean;
+  isPartner: boolean;
+  partnerProfile: PartnerProfile | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signUpWithEmail: (name: string, email: string, pass: string) => Promise<User>;
   signInWithEmail: (email: string, pass: string) => Promise<User>;
+  registerPartner: (data: {
+    companyName: string;
+    nif: string;
+    technicalResponsible: string;
+    email: string;
+    phone: string;
+    address: string;
+    province?: string;
+    municipality?: string;
+    validationDocuments: string;
+  }) => Promise<void>;
+  refreshPartnerProfile: () => Promise<void>;
   loginWithMasterKey: (key: string) => boolean;
   updateMasterKey: (newKey: string) => boolean;
   signOut: () => Promise<void>;
@@ -31,10 +49,14 @@ const AuthContext = createContext<AuthContextType>({
   currentUser: null,
   isAdmin: false,
   isMasterAdmin: false,
+  isPartner: false,
+  partnerProfile: null,
   loading: true,
   signInWithGoogle: async () => {},
   signUpWithEmail: async () => { throw new Error('Not implemented'); },
   signInWithEmail: async () => { throw new Error('Not implemented'); },
+  registerPartner: async () => {},
+  refreshPartnerProfile: async () => {},
   loginWithMasterKey: () => false,
   updateMasterKey: () => false,
   signOut: async () => {},
@@ -51,6 +73,7 @@ const MASTER_SESSION_STORAGE = 'apanzo_master_admin_session';
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isGoogleAdmin, setIsGoogleAdmin] = useState<boolean>(false);
+  const [partnerProfile, setPartnerProfile] = useState<PartnerProfile | null>(null);
   const [isMasterAdmin, setIsMasterAdmin] = useState<boolean>(() => {
     try {
       return localStorage.getItem(MASTER_SESSION_STORAGE) === 'true';
@@ -62,6 +85,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authError, setAuthError] = useState<string | null>(null);
 
   const isAdmin = isGoogleAdmin || isMasterAdmin;
+  const isPartner = Boolean(partnerProfile && partnerProfile.status !== 'suspended');
+
+  const fetchPartnerData = async (uid: string) => {
+    try {
+      const p = await dbService.getPartnerProfile(uid);
+      setPartnerProfile(p);
+    } catch (e) {
+      console.warn('Erro ao verificar parceiro:', e);
+      setPartnerProfile(null);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -78,28 +112,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsGoogleAdmin(true);
             // Ensure document exists in admins collection if primary admin
             if (isPrimaryAdmin && !adminDocSnap.exists()) {
-              await setDoc(adminDocRef, {
-                email: user.email,
-                role: 'admin',
-                updatedAt: new Date().toISOString(),
-              }, { merge: true });
+              await setDoc(
+                adminDocRef,
+                {
+                  email: user.email,
+                  role: 'admin',
+                  updatedAt: new Date().toISOString(),
+                },
+                { merge: true }
+              );
             }
           } else {
             setIsGoogleAdmin(false);
           }
+
+          // Check partner status
+          await fetchPartnerData(user.uid);
         } catch (err) {
-          // If Firestore query fails, fallback to verified primary email check
           const fallbackAdmin = user.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase();
           setIsGoogleAdmin(fallbackAdmin);
         }
       } else {
         setIsGoogleAdmin(false);
+        setPartnerProfile(null);
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  const refreshPartnerProfile = async () => {
+    if (currentUser) {
+      await fetchPartnerData(currentUser.uid);
+    }
+  };
 
   const loginWithMasterKey = (inputKey: string): boolean => {
     setAuthError(null);
@@ -148,26 +195,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const res = await signInWithPopup(auth, provider);
-      if (res.user) {
+      provider.addScope('email');
+      provider.addScope('profile');
+
+      let res;
+      try {
+        res = await signInWithPopup(auth, provider);
+      } catch (popupErr: any) {
+        // If popup was blocked by browser or running inside restricted iframe, fallback to redirect or helpful instructions
+        if (popupErr.code === 'auth/popup-blocked' && window.top === window.self) {
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        throw popupErr;
+      }
+
+      if (res && res.user) {
         // Record user profile in Firestore
-        await setDoc(doc(db, 'users', res.user.uid), {
-          uid: res.user.uid,
-          displayName: res.user.displayName || 'Utilizador',
-          email: res.user.email || '',
-          photoURL: res.user.photoURL || '',
-          role: 'client',
-          lastLoginAt: new Date().toISOString(),
-        }, { merge: true }).catch(() => {});
+        await setDoc(
+          doc(db, 'users', res.user.uid),
+          {
+            uid: res.user.uid,
+            displayName: res.user.displayName || 'Utilizador',
+            email: res.user.email || '',
+            photoURL: res.user.photoURL || '',
+            role: 'client',
+            lastLoginAt: new Date().toISOString(),
+          },
+          { merge: true }
+        ).catch(() => {});
+
+        await fetchPartnerData(res.user.uid);
       }
     } catch (err: any) {
       console.error('Falha no login com Google:', err);
-      if (err.code === 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/unauthorized-domain') {
+        const currentHost = window.location.hostname || 'localhost';
+        setAuthError(
+          `O domínio "${currentHost}" não está autorizado no Firebase. Adicione-o em: Firebase Console > Authentication > Settings > Authorized Domains.`
+        );
+      } else if (err.code === 'auth/popup-closed-by-user') {
         setAuthError('O pop-up de autenticação foi fechado antes de concluir.');
       } else if (err.code === 'auth/popup-blocked') {
-        setAuthError('O pop-up foi bloqueado pelo navegador. Por favor autorize os pop-ups para aceder.');
+        setAuthError('O pop-up foi bloqueado pelo navegador. Por favor permita pop-ups ou utilize o login por E-mail.');
       } else {
-        setAuthError(err.message || 'Falha ao autenticar.');
+        setAuthError(err.message || 'Falha ao autenticar com o Google.');
       }
       throw err;
     }
@@ -175,14 +247,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUpWithEmail = async (name: string, email: string, pass: string): Promise<User> => {
     setAuthError(null);
-    const trimmedEmail = email.trim().toLowerCase();
-    const trimmedName = name.trim();
-    if (!trimmedName) {
+    const cleanName = sanitizeText(name);
+    const cleanEmail = sanitizeEmail(email);
+
+    if (!cleanName) {
       const msg = 'Por favor indique o seu nome completo.';
       setAuthError(msg);
       throw new Error(msg);
     }
-    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+    if (!cleanEmail || !cleanEmail.includes('@')) {
       const msg = 'Por favor forneça um endereço de e-mail válido.';
       setAuthError(msg);
       throw new Error(msg);
@@ -194,23 +267,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const credential = await createUserWithEmailAndPassword(auth, trimmedEmail, pass);
+      const credential = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
       const user = credential.user;
 
-      // Update Firebase Auth profile
-      await updateProfile(user, { displayName: trimmedName });
+      await updateProfile(user, { displayName: cleanName });
 
-      // Save user in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        displayName: trimmedName,
-        email: trimmedEmail,
-        role: 'client',
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
-      }, { merge: true }).catch(() => {});
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          uid: user.uid,
+          displayName: cleanName,
+          email: cleanEmail,
+          role: 'client',
+          createdAt: new Date().toISOString(),
+          lastLoginAt: new Date().toISOString(),
+        },
+        { merge: true }
+      ).catch(() => {});
 
-      setCurrentUser({ ...user, displayName: trimmedName } as User);
+      setCurrentUser({ ...user, displayName: cleanName } as User);
       return user;
     } catch (err: any) {
       let friendlyMsg = 'Erro ao criar conta. Tente novamente.';
@@ -230,8 +305,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithEmail = async (email: string, pass: string): Promise<User> => {
     setAuthError(null);
-    const trimmedEmail = email.trim().toLowerCase();
-    if (!trimmedEmail || !trimmedEmail.includes('@')) {
+    const cleanEmail = sanitizeEmail(email);
+    if (!cleanEmail || !cleanEmail.includes('@')) {
       const msg = 'Por favor indique o seu e-mail.';
       setAuthError(msg);
       throw new Error(msg);
@@ -243,16 +318,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const credential = await signInWithEmailAndPassword(auth, trimmedEmail, pass);
+      const credential = await signInWithEmailAndPassword(auth, cleanEmail, pass);
       const user = credential.user;
 
-      // Update last login
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        lastLoginAt: new Date().toISOString(),
-      }, { merge: true }).catch(() => {});
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          uid: user.uid,
+          email: user.email,
+          lastLoginAt: new Date().toISOString(),
+        },
+        { merge: true }
+      ).catch(() => {});
 
+      await fetchPartnerData(user.uid);
       return user;
     } catch (err: any) {
       let friendlyMsg = 'Erro ao iniciar sessão. Verifique os seus dados.';
@@ -272,6 +351,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const registerPartner = async (data: {
+    companyName: string;
+    nif: string;
+    technicalResponsible: string;
+    email: string;
+    phone: string;
+    address: string;
+    province?: string;
+    municipality?: string;
+    validationDocuments: string;
+  }) => {
+    if (!currentUser) {
+      throw new Error('É necessário ter uma conta de utilizador para registar como parceiro.');
+    }
+
+    const cleanCompany = sanitizeText(data.companyName);
+    const cleanNif = sanitizeText(data.nif);
+    const cleanResp = sanitizeText(data.technicalResponsible);
+    const cleanMail = sanitizeEmail(data.email);
+    const cleanPh = sanitizePhone(data.phone);
+    const cleanAddr = sanitizeText(data.address);
+    const cleanDocs = sanitizeText(data.validationDocuments);
+
+    if (!cleanCompany || !cleanNif || !cleanResp || !cleanMail || !cleanPh) {
+      throw new Error('Por favor preencha todos os campos obrigatórios do parceiro.');
+    }
+
+    const partnerRecord: PartnerProfile = {
+      id: currentUser.uid,
+      userId: currentUser.uid,
+      companyName: cleanCompany,
+      nif: cleanNif,
+      technicalResponsible: cleanResp,
+      email: cleanMail,
+      phone: cleanPh,
+      address: cleanAddr,
+      province: data.province ? sanitizeText(data.province) : 'Luanda',
+      municipality: data.municipality ? sanitizeText(data.municipality) : '',
+      validationDocuments: cleanDocs,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await dbService.savePartnerProfile(partnerRecord);
+    setPartnerProfile(partnerRecord);
+  };
+
   const signOut = async () => {
     try {
       await fbSignOut(auth);
@@ -280,6 +407,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsGoogleAdmin(false);
       setIsMasterAdmin(false);
+      setPartnerProfile(null);
       try {
         localStorage.removeItem(MASTER_SESSION_STORAGE);
       } catch (e) {
@@ -296,10 +424,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser,
         isAdmin,
         isMasterAdmin,
+        isPartner,
+        partnerProfile,
         loading,
         signInWithGoogle,
         signUpWithEmail,
         signInWithEmail,
+        registerPartner,
+        refreshPartnerProfile,
         loginWithMasterKey,
         updateMasterKey,
         signOut,

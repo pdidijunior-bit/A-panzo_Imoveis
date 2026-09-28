@@ -97,7 +97,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [propDealType, setPropDealType] = useState<DealType>('venda');
   const [propCategory, setPropCategory] = useState('');
   const [propPrice, setPropPrice] = useState<number | ''>('');
-  const [propCurrency, setPropCurrency] = useState<'AOA' | 'USD'>('AOA');
+  const [propCurrency, setPropCurrency] = useState<'AOA' | 'USD' | 'EUR'>('AOA');
   const [propIsNegotiable, setPropIsNegotiable] = useState(false);
   const [propProvince, setPropProvince] = useState('Luanda');
   const [propMunicipality, setPropMunicipality] = useState('');
@@ -146,7 +146,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [visionInput, setVisionInput] = useState(siteSettings.aboutVision || '');
   const [phoneInput, setPhoneInput] = useState(siteSettings.phone || '+244 925 883 080');
   const [phone2Input, setPhone2Input] = useState(siteSettings.phone2 || '+244 928 771 808');
-  const [phone3Input, setPhone3Input] = useState(siteSettings.phone3 || '+244 952 644 332');
+  const [phone3Input, setPhone3Input] = useState(
+    siteSettings.phone3 && !siteSettings.phone3.includes('952') ? siteSettings.phone3 : ''
+  );
   const [whatsappInput, setWhatsappInput] = useState(siteSettings.whatsapp || '+244 925 883 080');
   const [emailInput, setEmailInput] = useState(siteSettings.email || 'comercial@anpanzo.com');
   const [email2Input, setEmail2Input] = useState(siteSettings.email2 || 'ap.imobiliaria1985@gmail.com');
@@ -403,8 +405,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         parkingSpaces: Number(propParking) || 0,
         features: Array.isArray(propFeatures) ? propFeatures : [],
         description: propDescription.trim() || '',
-        condition: propCondition || 'Usado / Bom estado',
-        status: propStatus || 'Disponível',
+        condition: propCondition || 'usado',
+        status: propStatus || 'disponivel',
         isFeatured: Boolean(propIsFeatured),
         images: Array.isArray(propImages) ? propImages : [],
         videoUrl: propVideoUrl.trim() || null,
@@ -533,7 +535,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         aboutVision: visionInput.trim(),
         phone: phoneInput.trim(),
         phone2: phone2Input.trim(),
-        phone3: phone3Input.trim(),
+        phone3: phone3Input.includes('952') ? '' : phone3Input.trim(),
         whatsapp: whatsappInput.trim(),
         email: emailInput.trim(),
         email2: email2Input.trim(),
@@ -1645,6 +1647,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     type="text"
                     value={phone3Input}
                     onChange={(e) => setPhone3Input(e.target.value)}
+                    placeholder="Opcional (Ex: +244 928 000 000)"
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-mono"
                   />
                 </div>

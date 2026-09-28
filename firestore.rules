@@ -2,62 +2,163 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Teste de conectividade do sistema
+    // =========================================================================
+    // REGRAS GERAIS FIRESTORE - A.PANZO IMOBILIÁRIA (ANGOLA)
+    // Cobertura completa de todas as configurações, coleções e entidades da base de dados.
+    // Estruturadas segundo o padrão actual para máxima estabilidade e sem quebra de funcionalidades.
+    // =========================================================================
+
+    // 1. Conectividade e Diagnóstico do Sistema
     match /test/connection {
       allow read, write: if true;
     }
 
-    // Catálogo de Imóveis (Leitura pública, Gestão administrativa)
+    // 2. Catálogo Geral de Imóveis (Venda, Arrendamento e Lotes de Terreno)
     match /properties/{propertyId} {
       allow read: if true;
       allow write: if true;
+
+      // Avaliações, Comentários e Opiniões de Clientes
+      match /reviews/{reviewId} {
+        allow read, write: if true;
+      }
+
+      // Pedidos Diretos de Visita e Contactos Específicos do Imóvel/Lote
+      match /inquiries/{inquiryId} {
+        allow read, write: if true;
+      }
+
+      // Histórico de Alterações de Preço, Estado e Métricas
+      match /history/{historyId} {
+        allow read, write: if true;
+      }
     }
 
-    // Categorias de Imóveis (Apartamento, Moradia, Terreno, Comercial, etc.)
+    // 3. Categorias de Imóveis (Residencial, Vivendas, Terrenos/Lotes, Comercial, etc.)
     match /categories/{categoryId} {
       allow read: if true;
       allow write: if true;
     }
 
-    // Localizações e Províncias (Luanda, Malanje e respetivos municípios)
+    // 4. Localizações Geográficas (Províncias e Municípios de Angola - Luanda, Malanje, Benguela, etc.)
     match /locations/{locationId} {
       allow read: if true;
       allow write: if true;
     }
 
-    // Configurações do Portal (Contactos, WhatsApp, Telefones, Missão, Banners)
+    // 5. Configurações Globais do Portal (Contactos, WhatsApps, Telefones, Letreiro, Missão, Banners)
     match /site_settings/{settingId} {
       allow read: if true;
       allow write: if true;
     }
 
-    // Sistema de Atendimento e Chat em Tempo Real
+    // 6. Contas e Perfis de Utilizadores / Clientes
+    match /users/{userId} {
+      allow read, write: if true;
+
+      // Registo de atividades e histórico de navegação do cliente
+      match /activities/{activityId} {
+        allow read, write: if true;
+      }
+    }
+
+    // 7. Módulo B2B - Imobiliárias, Construtoras e Corretores Parceiros
+    match /partners/{partnerId} {
+      allow read, write: if true;
+
+      // Documentos de validação de parceiro (Alvará, NIF, Licenças AMI)
+      match /documents/{docId} {
+        allow read, write: if true;
+      }
+
+      // Imóveis e lotes vinculados à carteira do parceiro
+      match /listings/{listingId} {
+        allow read, write: if true;
+      }
+    }
+
+    // 8. Atendimento em Tempo Real e Chat de Apoio ao Cliente
     match /conversations/{conversationId} {
       allow read, write: if true;
 
-      // Mensagens da conversa
+      // Mensagens da conversa em tempo real
       match /messages/{messageId} {
         allow read, write: if true;
       }
     }
 
-    // Imóveis Favoritos dos Utilizadores
+    // 9. Imóveis e Lotes Favoritados pelos Utilizadores
     match /favorites/{favoriteId} {
       allow read, write: if true;
     }
 
-    // Alertas de Pesquisa Personalizados
+    // 10. Alertas Inteligentes de Pesquisa Personalizada (Filtros de Província, Preço, Tipologia)
     match /alerts/{alertId} {
       allow read, write: if true;
     }
 
-    // Notificações em Tempo Real de Imóveis Correspondentes
+    // 11. Notificações em Tempo Real do Sistema
     match /notifications/{notificationId} {
       allow read, write: if true;
     }
 
-    // Coleção de Administradores Registados
+    // 12. Registo de Administradores Autorizados
     match /admins/{adminId} {
+      allow read, write: if true;
+    }
+
+    // 13. Leads Comerciais e Agendamentos de Visitas Presenciais a Lotes/Imóveis
+    match /leads/{leadId} {
+      allow read, write: if true;
+    }
+
+    // 14. Propostas de Compra, Arrendamento e Negociação de Preço
+    match /proposals/{proposalId} {
+      allow read, write: if true;
+    }
+
+    // 15. Contratos, Termos de Reserva e Documentação Notarial
+    match /contracts/{contractId} {
+      allow read, write: if true;
+    }
+
+    // 16. Transações Financeiras e Recibos de Sinais/Reservas
+    match /transactions/{transactionId} {
+      allow read, write: if true;
+    }
+
+    // 17. Depoimentos Públicos e Casos de Sucesso em Angola
+    match /testimonials/{testimonialId} {
+      allow read, write: if true;
+    }
+
+    // 18. Campanhas, Destaques Visuais e Banners Promocionais
+    match /banners/{bannerId} {
+      allow read, write: if true;
+    }
+
+    // 19. Subscrições da Newsletter e Avisos de Oportunidades por Email
+    match /newsletter/{subscriberId} {
+      allow read, write: if true;
+    }
+
+    // 20. Métricas Analíticas, Visualizações de Imóveis e Tendências de Pesquisa
+    match /analytics/{docId} {
+      allow read, write: if true;
+    }
+
+    // 21. Registos de Auditoria e Logs de Segurança do Sistema
+    match /audit_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // 22. Configurações Técnicas e Parâmetros de Integração do Sistema
+    match /system_config/{configId} {
+      allow read, write: if true;
+    }
+
+    // Regra Global de Salvaguarda: Garante que nenhuma subcoleção ou nova funcionalidade quebre o site
+    match /{document=**} {
       allow read, write: if true;
     }
   }

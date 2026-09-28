@@ -115,7 +115,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   ],
   phone: '+244 925 883 080',
   phone2: '+244 928 771 808',
-  phone3: '+244 952 644 332',
+  phone3: '',
   whatsapp: '+244 925 883 080',
   email: 'comercial@anpanzo.com',
   email2: 'ap.imobiliaria1985@gmail.com',

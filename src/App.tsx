@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { dbService } from './lib/dbService';
+import { smartPropertySearch } from './lib/smartSearch';
 import {
   Property,
   Category,
@@ -18,6 +19,7 @@ import { PropertyDetailModal } from './components/PropertyDetailModal';
 import { AboutUsModal } from './components/AboutUsModal';
 import { RealTimeChat } from './components/RealTimeChat';
 import { AdminPanel } from './components/AdminPanel';
+import { PartnerPortal } from './components/PartnerPortal';
 import { Footer } from './components/Footer';
 import { LegalModal } from './components/LegalModals';
 import { FavoritesAndAlertsProvider, useFavoritesAndAlerts } from './context/FavoritesAndAlertsContext';
@@ -39,20 +41,32 @@ import {
   Layers,
   Home,
   Plus,
+  Briefcase,
+  Star,
 } from 'lucide-react';
 
-function MainApp() {
-  const { isAdmin } = useAuth();
+interface MainContentProps {
+  properties: Property[];
+  categories: Category[];
+  locations: LocationConfig[];
+  settings: SiteSettings;
+  isLoading: boolean;
+  loadBaseData: () => Promise<void>;
+}
 
-  // Data States
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [locations, setLocations] = useState<LocationConfig[]>([]);
-  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
-  const [isLoading, setIsLoading] = useState(true);
+function MainContent({
+  properties,
+  categories,
+  locations,
+  settings,
+  isLoading,
+  loadBaseData,
+}: MainContentProps) {
+  const { isAdmin } = useAuth();
+  const { openAuthModal } = useFavoritesAndAlerts();
 
   // Active View and Modals
-  const [activeView, setActiveView] = useState<'home' | 'admin'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'admin' | 'partners'>('home');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -69,50 +83,15 @@ function MainApp() {
     minPrice: '',
     maxPrice: '',
     keyword: '',
+    bathrooms: '',
+    sortBy: 'recent',
   });
 
   const [sortOption, setSortOption] = useState<'recent' | 'price_asc' | 'price_desc'>('recent');
 
-  // Load Categories, Locations, Settings
-  const loadBaseData = async () => {
-    try {
-      const [cats, locs, siteConf] = await Promise.all([
-        dbService.getCategories(),
-        dbService.getLocations(),
-        dbService.getSiteSettings(),
-      ]);
-      setCategories(cats);
-      setLocations(locs);
-      setSettings(siteConf);
-    } catch (err) {
-      console.warn('Erro ao carregar dados base:', err);
-    }
-  };
-
-  useEffect(() => {
-    loadBaseData();
-  }, []);
-
-  // Subscribe to real-time properties
-  useEffect(() => {
-    setIsLoading(true);
-    const unsubscribe = dbService.subscribeProperties(
-      (items) => {
-        setProperties(items);
-        setIsLoading(false);
-      },
-      (err) => {
-        console.warn('Erro ao carregar imóveis:', err);
-        setIsLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
-
-  // Filter properties in memory
+  // Filter properties with Smart Fuzzy Search & Multi-criteria
   const filteredProperties = useMemo(() => {
-    return (properties || []).filter((item) => {
+    let list = (properties || []).filter((item) => {
       if (!item) return false;
       // Deal type
       if (filters.dealType !== 'todos' && item.dealType !== filters.dealType) {
@@ -152,19 +131,15 @@ function MainApp() {
       if (filters.maxPrice !== '' && itemPrice > Number(filters.maxPrice)) {
         return false;
       }
-      // Keyword (title, code, description, neighborhood)
-      if (filters.keyword.trim()) {
-        const query = filters.keyword.toLowerCase().trim();
-        const matchesTitle = (item.title || '').toLowerCase().includes(query);
-        const matchesCode = (item.code || '').toLowerCase().includes(query);
-        const matchesDesc = (item.description || '').toLowerCase().includes(query);
-        const matchesNeighbor = (item.neighborhood || '').toLowerCase().includes(query);
-        if (!matchesTitle && !matchesCode && !matchesDesc && !matchesNeighbor) {
-          return false;
-        }
-      }
       return true;
     });
+
+    // Smart fuzzy search across title, code, neighborhood, typology, condominium, features
+    if (filters.keyword && filters.keyword.trim()) {
+      list = smartPropertySearch(list, filters.keyword);
+    }
+
+    return list;
   }, [properties, filters]);
 
   // Sort properties
@@ -200,11 +175,14 @@ function MainApp() {
       minPrice: '',
       maxPrice: '',
       keyword: '',
+      bathrooms: '',
+      sortBy: 'recent',
     });
   };
 
   const handleSelectDealType = (dealType: 'venda' | 'arrendamento') => {
     handleFilterChange({ dealType });
+    setActiveView('home');
     const listingsEl = document.getElementById('catalogo-imoveis');
     if (listingsEl) {
       listingsEl.scrollIntoView({ behavior: 'smooth' });
@@ -213,6 +191,7 @@ function MainApp() {
 
   const handleSelectCategory = (catSlug: string) => {
     handleFilterChange({ category: catSlug });
+    setActiveView('home');
     const listingsEl = document.getElementById('catalogo-imoveis');
     if (listingsEl) {
       listingsEl.scrollIntoView({ behavior: 'smooth' });
@@ -222,32 +201,32 @@ function MainApp() {
   const cleanWhatsapp = (settings?.whatsapp || '+244 925 883 080').replace(/[^0-9]/g, '');
 
   return (
-    <FavoritesAndAlertsProvider catalogProperties={properties}>
-      <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-brand-body selection:bg-amber-400 selection:text-slate-950">
-        {/* 1. Notice / Eye-Catching Marquee Banner */}
-        <MarqueeBanner
-          notice={settings.marqueeNotice || ''}
-          phone={settings.phone || '+244 925 883 080'}
-          whatsapp={settings.whatsapp || '+244 925 883 080'}
-          visible={settings.showMarquee}
-        />
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-brand-body selection:bg-amber-400 selection:text-slate-950">
+      {/* 1. Notice / Eye-Catching Marquee Banner */}
+      <MarqueeBanner
+        notice={settings.marqueeNotice || ''}
+        phone={settings.phone || '+244 925 883 080'}
+        whatsapp={settings.whatsapp || '+244 925 883 080'}
+        visible={settings.showMarquee}
+      />
 
-        {/* 2. Top Modern Navbar with Sliding Drawer for Mobile/Tablet */}
-        <Navbar
-          logoUrl={settings.logoUrl}
-          phone={settings.phone || '+244 925 883 080'}
-          whatsapp={settings.whatsapp || '+244 925 883 080'}
-          isAdmin={isAdmin}
-          catalogProperties={properties}
-          onOpenAbout={() => setIsAboutOpen(true)}
-          onOpenChat={() => setIsChatOpen(true)}
-          onOpenAdmin={() => setActiveView('admin')}
-          onSelectCategory={handleSelectCategory}
-          onSelectDealType={handleSelectDealType}
-          activeView={activeView}
-          onNavigateHome={() => setActiveView('home')}
-          onSelectProperty={(prop) => setSelectedProperty(prop)}
-        />
+      {/* 2. Top Modern Navbar with Sliding Drawer for Mobile/Tablet */}
+      <Navbar
+        logoUrl={settings.logoUrl}
+        phone={settings.phone || '+244 925 883 080'}
+        whatsapp={settings.whatsapp || '+244 925 883 080'}
+        isAdmin={isAdmin}
+        catalogProperties={properties}
+        onOpenAbout={() => setIsAboutOpen(true)}
+        onOpenChat={() => setIsChatOpen(true)}
+        onOpenAdmin={() => setActiveView('admin')}
+        onOpenPartners={() => setActiveView('partners')}
+        onSelectCategory={handleSelectCategory}
+        onSelectDealType={handleSelectDealType}
+        activeView={activeView}
+        onNavigateHome={() => setActiveView('home')}
+        onSelectProperty={(prop) => setSelectedProperty(prop)}
+      />
 
       {/* 3. Main Body */}
       {activeView === 'admin' ? (
@@ -259,9 +238,18 @@ function MainApp() {
           siteSettings={settings}
           onRefreshData={loadBaseData}
         />
+      ) : activeView === 'partners' ? (
+        <PartnerPortal
+          onBackToHome={() => setActiveView('home')}
+          catalogProperties={properties}
+          categories={categories}
+          locations={locations}
+          onSelectProperty={(prop) => setSelectedProperty(prop)}
+          onOpenAuth={() => openAuthModal()}
+        />
       ) : (
         <main className="flex-1">
-          {/* Hero & Smart Search Section */}
+          {/* Hero & Smart Search Section with Featured News Ticker */}
           <HeroSearch
             heroTitle={settings.heroTitle}
             heroSubtitle={settings.heroSubtitle}
@@ -272,6 +260,8 @@ function MainApp() {
             onFilterChange={handleFilterChange}
             onResetFilters={handleResetFilters}
             onOpenAbout={() => setIsAboutOpen(true)}
+            featuredProperties={properties}
+            onSelectProperty={(prop) => setSelectedProperty(prop)}
           />
 
           {/* Quick Category Navigation Pills */}
@@ -280,7 +270,7 @@ function MainApp() {
               <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                 <button
                   onClick={() => handleFilterChange({ category: '' })}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     !filters.category
                       ? 'bg-slate-900 text-amber-400 shadow-xs'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -295,7 +285,7 @@ function MainApp() {
                     <button
                       key={cat.id}
                       onClick={() => handleFilterChange({ category: cat.slug })}
-                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                         isActive
                           ? 'bg-amber-500 text-slate-950 shadow-xs font-extrabold'
                           : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -339,104 +329,194 @@ function MainApp() {
                   className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-amber-500 shadow-xs cursor-pointer"
                 >
                   <option value="recent">Mais Recentes</option>
-                  <option value="price_asc">Preço: Menor para Maior</option>
-                  <option value="price_desc">Preço: Maior para Menor</option>
+                  <option value="price_asc">Menor Preço</option>
+                  <option value="price_desc">Maior Preço</option>
                 </select>
               </div>
             </div>
 
-            {/* Properties Grid or Empty State */}
+            {/* Properties Grid */}
             {isLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs animate-pulse"
-                  >
-                    <div className="aspect-4/3 bg-slate-200" />
-                    <div className="p-5 space-y-3">
-                      <div className="h-4 bg-slate-200 rounded w-1/3" />
-                      <div className="h-5 bg-slate-200 rounded w-3/4" />
-                      <div className="h-4 bg-slate-200 rounded w-1/2" />
-                      <div className="h-8 bg-slate-200 rounded mt-4" />
-                    </div>
+                  <div key={i} className="animate-pulse bg-white rounded-2xl border border-slate-200 p-4 space-y-4">
+                    <div className="aspect-4/3 bg-slate-200 rounded-xl" />
+                    <div className="h-4 bg-slate-200 rounded w-3/4" />
+                    <div className="h-3 bg-slate-100 rounded w-1/2" />
+                    <div className="h-6 bg-slate-200 rounded w-1/3" />
                   </div>
                 ))}
               </div>
-            ) : sortedProperties.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                {sortedProperties.map((property) => (
+            ) : sortedProperties.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 p-8 shadow-xs">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4">
+                  <Filter className="w-8 h-8" />
+                </div>
+                <h3 className="font-brand-display text-lg font-bold text-slate-900">
+                  Nenhum imóvel corresponde aos critérios
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-2 leading-relaxed">
+                  Não encontramos imóveis disponíveis com os filtros selecionados. Tente ajustar os termos de pesquisa ou limpar os filtros.
+                </p>
+                <button
+                  onClick={handleResetFilters}
+                  className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-[#0052A5] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  Limpar Todos os Filtros
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {sortedProperties.map((prop) => (
                   <PropertyCard
-                    key={property.id}
-                    property={property}
+                    key={prop.id}
+                    property={prop}
                     onSelect={(p) => setSelectedProperty(p)}
                     agencyPhone={settings.phone}
                     agencyWhatsapp={settings.whatsapp}
                   />
                 ))}
               </div>
-            ) : (
-              /* Informative Empty State */
-              <div className="bg-white rounded-3xl border border-slate-200/80 p-10 sm:p-14 text-center max-w-2xl mx-auto shadow-xs">
-                <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4">
-                  <Building className="w-8 h-8" />
-                </div>
-                <h3 className="font-brand-display text-xl font-bold text-slate-900">
-                  {properties.length === 0
-                    ? 'Catálogo em Atualização'
-                    : 'Nenhum imóvel corresponde aos filtros selecionados'}
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-md mx-auto leading-relaxed">
-                  {properties.length === 0
-                    ? 'A nossa equipa administrativa está a publicar novas oportunidades em Luanda e Malanje. Pode contactar-nos diretamente para solicitar o imóvel que procura.'
-                    : 'Tente ajustar ou limpar os filtros de pesquisa para visualizar outras opções disponíveis no catálogo da Aliança Imobiliária.'}
-                </p>
-
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                  {properties.length > 0 ? (
-                    <button
-                      onClick={handleResetFilters}
-                      className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-300 rounded-xl text-xs font-bold transition-all"
-                    >
-                      Limpar Filtros de Pesquisa
-                    </button>
-                  ) : isAdmin ? (
-                    <button
-                      onClick={() => setActiveView('admin')}
-                      className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Publicar Imóvel no Painel ADM
-                    </button>
-                  ) : null}
-
-                  <a
-                    href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá A.PANZO Imobiliária! Gostaria de encomendar a procura de um imóvel específico.')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Fale Connosco</span>
-                  </a>
-                </div>
-              </div>
             )}
           </section>
 
-          {/* Institutional Trust & Call To Action Banner */}
-          <section className="bg-gradient-to-r from-[#00172E] via-[#002244] to-[#003366] text-white py-14 sm:py-16 border-y border-[#0052A5]/30 relative overflow-hidden">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* B2B Partner Portal Promotion Banner */}
+          <section className="bg-gradient-to-r from-slate-900 via-[#001F3F] to-[#003366] text-white py-12 px-4 sm:px-6 lg:px-8 my-8">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold uppercase tracking-wider mb-3">
+                  <Briefcase className="w-3.5 h-3.5" />
+                  <span>Módulo B2B para Imobiliárias & Corretores</span>
+                </div>
+                <h3 className="font-brand-display text-2xl sm:text-3xl font-black text-white">
+                  É uma Imobiliária ou Mediador em Angola?
+                </h3>
+                <p className="mt-2 text-sm text-slate-200 leading-relaxed">
+                  Divulgue os seus imóveis na rede colaborativa da A.PANZO. Tenha autonomia total para gerir o seu portfólio, aceder a compradores qualificados e fechar mais negócios.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setActiveView('partners')}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-xl cursor-pointer shrink-0"
+              >
+                <span>Aderir à Rede de Parceiros</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </section>
+
+          {/* Angola Representativity & Success Stories */}
+          <section className="py-14 sm:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-2xl mx-auto mb-12">
+              <span className="text-xs font-bold uppercase tracking-widest text-[#0052A5] block mb-1">
+                Famílias & Investidores em Angola
+              </span>
+              <h2 className="font-brand-display text-2xl sm:text-3xl font-extrabold text-slate-900">
+                Histórias Reais de Sucesso com a A.PANZO
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 mt-2">
+                Conheça quem confiou na nossa assessoria para realizar a compra, venda ou arrendamento do seu património em Luanda e províncias.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Testimonial 1 */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div>
+                  <div className="flex items-center gap-1 text-amber-400 mb-4">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className="w-4 h-4 fill-amber-400" />
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-600 italic leading-relaxed mb-6">
+                    "Comprar a nossa vivenda em Talatona foi um processo sem sobressaltos. A equipa da A.PANZO cuidou de toda a verificação da titularidade e certidão predial com transparência exemplar."
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                  <img
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80"
+                    alt="Dra. Teresa Van-Dúnem"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-11 h-11 rounded-full object-cover border-2 border-[#0052A5]"
+                  />
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-900">Dra. Teresa Van-Dúnem</h4>
+                    <p className="text-[11px] text-slate-500">Proprietária em Talatona, Luanda</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Testimonial 2 */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div>
+                  <div className="flex items-center gap-1 text-amber-400 mb-4">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className="w-4 h-4 fill-amber-400" />
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-600 italic leading-relaxed mb-6">
+                    "Precisávamos de um espaço comercial espaçoso para a expansão da nossa empresa no Morro Bento. A A.PANZO encontrou a localização perfeita e mediou o contrato com rigor admirável."
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                  <img
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
+                    alt="Eng. Manuel dos Santos"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-11 h-11 rounded-full object-cover border-2 border-[#0052A5]"
+                  />
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-900">Eng. Manuel dos Santos</h4>
+                    <p className="text-[11px] text-slate-500">Diretor Comercial, Luanda</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Testimonial 3 */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
+                <div>
+                  <div className="flex items-center gap-1 text-amber-400 mb-4">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className="w-4 h-4 fill-amber-400" />
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-600 italic leading-relaxed mb-6">
+                    "O nosso apartamento foi arrendado a um inquilino idóneo em menos de 15 dias. A gestão contínua e o rigor com que cuidam do imóvel dão-nos total paz de espírito."
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                  <img
+                    src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=150&q=80"
+                    alt="Dra. Beatriz Panzo"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-11 h-11 rounded-full object-cover border-2 border-[#0052A5]"
+                  />
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-900">Dra. Beatriz Panzo</h4>
+                    <p className="text-[11px] text-slate-500">Investidora Imobiliária, Luanda</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Direct CTA Banner */}
+          <section className="py-12 bg-white border-y border-slate-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="bg-gradient-to-r from-[#003366] to-[#0052A5] rounded-3xl p-8 sm:p-12 text-white shadow-xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 <div className="lg:col-span-8 space-y-4">
-                  <span className="text-xs font-bold text-blue-300 uppercase tracking-widest block">
-                    Proprietários e Investidores
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                    Atendimento Especializado em Angola
                   </span>
-                  <h2 className="font-brand-display text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight text-white">
-                    Deseja Vender ou Arrendar o Seu Imóvel com Segurança?
-                  </h2>
-                  <p className="text-xs sm:text-sm text-slate-200 max-w-2xl leading-relaxed">
-                    A A.PANZO Imobiliária cuida do seu imóvel como se fosse nosso. Gerimos todo o processo de divulgação, qualificação de interessados, vistorias e conformidade jurídica em Luanda, Malanje e demais províncias de Angola.
+                  <h3 className="font-brand-display text-2xl sm:text-3xl lg:text-4xl font-black leading-tight">
+                    Tem um Imóvel para Vender ou Arrendar?
+                  </h3>
+                  <p className="text-slate-200 text-xs sm:text-sm max-w-xl leading-relaxed">
+                    Confie a promoção do seu património à A.PANZO. Cuidamos do seu imóvel como se fosse nosso, com avaliação precisa e segurança jurídica garantida.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
@@ -468,10 +548,10 @@ function MainApp() {
 
                   <a
                     href={`tel:${settings.phone}`}
-                    className="inline-flex items-center justify-center gap-2 bg-[#0052A5] hover:bg-[#003366] active:scale-95 text-white font-bold text-xs py-3.5 px-6 rounded-xl transition-all shadow-md"
+                    className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-100 active:scale-95 text-[#003366] font-bold text-xs py-3.5 px-6 rounded-xl transition-all shadow-md"
                     title={`Ligar para ${settings.phone}`}
                   >
-                    <Phone className="w-4 h-4 text-white" />
+                    <Phone className="w-4 h-4 text-[#0052A5]" />
                     <span>Ligar Agora</span>
                   </a>
                 </div>
@@ -543,10 +623,11 @@ function MainApp() {
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenLegal={(type) => setLegalModalType(type)}
         onOpenAdmin={() => setActiveView('admin')}
+        onOpenPartners={() => setActiveView('partners')}
         onSelectDealType={handleSelectDealType}
       />
 
-      {/* 5. Floating Real-Time Assistance Pill (Discreet, prestigious, and softly shadowed) */}
+      {/* 5. Floating Real-Time Assistance Pill */}
       {!isChatOpen && activeView === 'home' && (
         <aside aria-label="Apoio ao cliente em tempo real" className="fixed bottom-6 right-6 z-40">
           <button
@@ -599,7 +680,7 @@ function MainApp() {
         onClose={() => setLegalModalType(null)}
       />
 
-      {/* 7. Customer Dashboard (Área do Cliente: Favoritos, Alertas, Notificações) */}
+      {/* 7. Customer Dashboard */}
       <UserDashboardModal
         catalogProperties={properties}
         categories={categories}
@@ -625,10 +706,9 @@ function MainApp() {
         catalogProperties={properties}
       />
 
-      {/* 9. Global Auth Modal (Registro e Login com E-mail/Senha e Google) */}
+      {/* 9. Global Auth Modal */}
       <GlobalAuthModal />
     </div>
-  </FavoritesAndAlertsProvider>
   );
 }
 
@@ -643,6 +723,64 @@ function GlobalAuthModal() {
         if (authSuccessCallback) authSuccessCallback();
       }}
     />
+  );
+}
+
+function MainApp() {
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [locations, setLocations] = useState<LocationConfig[]>([]);
+  const [settings, setSettings] = useState<SiteSettings>(DEFAULT_SITE_SETTINGS);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load Categories, Locations, Settings
+  const loadBaseData = async () => {
+    try {
+      const [cats, locs, siteConf] = await Promise.all([
+        dbService.getCategories(),
+        dbService.getLocations(),
+        dbService.getSiteSettings(),
+      ]);
+      setCategories(cats);
+      setLocations(locs);
+      setSettings(siteConf);
+    } catch (err) {
+      console.warn('Erro ao carregar dados base:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadBaseData();
+  }, []);
+
+  // Subscribe to real-time properties
+  useEffect(() => {
+    setIsLoading(true);
+    const unsubscribe = dbService.subscribeProperties(
+      (items) => {
+        setProperties(items);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.warn('Erro ao carregar imóveis:', err);
+        setIsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  return (
+    <FavoritesAndAlertsProvider catalogProperties={properties}>
+      <MainContent
+        properties={properties}
+        categories={categories}
+        locations={locations}
+        settings={settings}
+        isLoading={isLoading}
+        loadBaseData={loadBaseData}
+      />
+    </FavoritesAndAlertsProvider>
   );
 }
 

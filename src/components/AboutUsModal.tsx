@@ -13,6 +13,7 @@ import {
   CheckCircle,
   Building2,
   Handshake,
+  Users,
   Globe,
   Instagram,
   Facebook,
@@ -38,8 +39,8 @@ export const AboutUsModal: React.FC<AboutUsModalProps> = ({
   const phones = [
     settings.phone || '+244 925 883 080',
     settings.phone2 || '+244 928 771 808',
-    settings.phone3 || '+244 952 644 332',
-  ];
+    settings.phone3,
+  ].filter((p): p is string => Boolean(p && !p.includes('952')));
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
@@ -162,6 +163,49 @@ export const AboutUsModal: React.FC<AboutUsModalProps> = ({
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Administração completa do seu património, selecção de inquilinos e acompanhamento minucioso do contrato.
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Compromisso com Angola & Representatividade */}
+          <div className="bg-gradient-to-r from-blue-50 to-slate-50 p-6 rounded-2xl border border-blue-100">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 rounded-lg bg-[#0052A5] text-white">
+                <Users className="w-4 h-4" />
+              </div>
+              <h4 className="font-brand-display text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Compromisso com as Famílias & Empresas Angolanas
+              </h4>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed mb-4">
+              A A.PANZO orgulha-se de participar na concretização do sonho da casa própria e na expansão comercial de famílias e empreendedores em Angola, com atendimento humanizado, proximidade e segurança jurídica.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="relative rounded-xl overflow-hidden shadow-xs border border-white">
+                <img
+                  src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=700&q=80"
+                  alt="Consultoria Imobiliária Profissional em Angola"
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-36 object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-3">
+                  <span className="text-[11px] font-bold text-white">Consultoria Especializada & Rigor Jurídico</span>
+                </div>
+              </div>
+
+              <div className="relative rounded-xl overflow-hidden shadow-xs border border-white">
+                <img
+                  src="https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=700&q=80"
+                  alt="Família Angolana no seu Novo Lar"
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-36 object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-3">
+                  <span className="text-[11px] font-bold text-white">Sonho Realizado com Qualidade e Confiança</span>
+                </div>
               </div>
             </div>
           </div>

@@ -27,12 +27,13 @@ interface NavbarProps {
   onOpenAdmin: () => void;
   isAdmin: boolean;
   onNavigateHome: () => void;
-  activeView: 'home' | 'admin';
+  activeView: 'home' | 'admin' | 'partners';
   phone: string;
   whatsapp: string;
   logoUrl?: string;
   onOpenAbout: () => void;
   onOpenChat: () => void;
+  onOpenPartners?: () => void;
   onSelectCategory?: (categoryId: string) => void;
   onSelectDealType?: (dealType: 'venda' | 'arrendamento') => void;
   favoriteCount?: number;
@@ -51,6 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   logoUrl,
   onOpenAbout,
   onOpenChat,
+  onOpenPartners,
   onSelectCategory,
   onSelectDealType,
   favoriteCount = 0,
@@ -166,6 +168,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 Sobre Nós
               </button>
+
+              {onOpenPartners && (
+                <button
+                  onClick={onOpenPartners}
+                  className={`transition-colors hover:text-[#0052A5] cursor-pointer py-1 flex items-center gap-1.5 ${
+                    activeView === 'partners' ? 'text-[#0052A5] font-bold' : ''
+                  }`}
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Parceiros B2B</span>
+                </button>
+              )}
             </nav>
 
             {/* Direct Contact Buttons (Desktop) - Unified hierarchy: Primary (WhatsApp) + Secondary (Call) + Support */}
@@ -423,6 +437,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <ChevronRight className="w-4 h-4 text-blue-300" />
                   )}
                 </button>
+
+                {onOpenPartners && (
+                  <button
+                    onClick={() => {
+                      closeMenu();
+                      onOpenPartners();
+                    }}
+                    className="flex items-center justify-between w-full p-3 rounded-xl bg-amber-50/70 text-amber-900 hover:bg-amber-100/70 transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-3 font-semibold">
+                      <Briefcase className="w-4 h-4 text-amber-600" />
+                      Área de Parceiros (B2B)
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-amber-400" />
+                  </button>
+                )}
 
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-3 pt-3 pb-1">
                   Navegação Principal

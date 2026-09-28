@@ -1,3 +1,20 @@
+export interface PartnerProfile {
+  id: string; // Document ID (usually matches userId)
+  userId: string;
+  companyName: string;
+  nif: string;
+  technicalResponsible: string;
+  email: string;
+  phone: string;
+  address: string;
+  province?: string;
+  municipality?: string;
+  validationDocuments: string; // Alvará / Licença Comercial / Registo Predial
+  status: 'active' | 'pending' | 'suspended';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type DealType = 'venda' | 'arrendamento' | 'trespasse';
 
 export type PropertyCondition = 'novo' | 'usado' | 'em_construcao' | 'remodelado';

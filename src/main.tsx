@@ -12,3 +12,10 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
+// Register UltraBoost Service Worker for static asset performance
+if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+

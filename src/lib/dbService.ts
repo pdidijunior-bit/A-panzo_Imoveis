@@ -22,6 +22,7 @@ import {
   PropertyAlert,
   AlertNotification,
   DealType,
+  PartnerProfile,
 } from '../types';
 import { DEFAULT_CATEGORIES, ANGOLA_LOCATIONS, DEFAULT_SITE_SETTINGS } from './defaultData';
 import { normalizeCurrency } from './formatters';
@@ -59,8 +60,8 @@ function normalizeSiteSettings(data: any): SiteSettings {
     merged.phone2 = '+244 928 771 808';
     migrated = true;
   }
-  if (!merged.phone3) {
-    merged.phone3 = '+244 952 644 332';
+  if (merged.phone3 && merged.phone3.includes('952')) {
+    merged.phone3 = '';
     migrated = true;
   }
   if (!merged.email || merged.email.includes('aliancaimobiliaria.ao')) {
@@ -772,6 +773,71 @@ export const dbService = {
     }
 
     return true;
+  },
+
+  // ----------------------------------------------------
+  // PARTNERS (B2B) MODULE
+  // ----------------------------------------------------
+
+  async savePartnerProfile(partner: PartnerProfile): Promise<void> {
+    try {
+      const partnerDocRef = doc(db, 'partners', partner.userId);
+      const cleanData = cleanFirestoreData({
+        ...partner,
+        updatedAt: new Date().toISOString(),
+      });
+      await setDoc(partnerDocRef, cleanData, { merge: true });
+
+      // Also ensure role 'partner' in users collection
+      const userDocRef = doc(db, 'users', partner.userId);
+      await setDoc(
+        userDocRef,
+        {
+          role: 'partner',
+          partnerId: partner.userId,
+          companyName: partner.companyName,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'partners');
+      throw error;
+    }
+  },
+
+  async getPartnerProfile(userId: string): Promise<PartnerProfile | null> {
+    try {
+      const partnerDocRef = doc(db, 'partners', userId);
+      const snap = await getDoc(partnerDocRef);
+      if (snap.exists()) {
+        return snap.data() as PartnerProfile;
+      }
+      return null;
+    } catch (error) {
+      console.warn('Erro ao carregar perfil de parceiro:', error);
+      return null;
+    }
+  },
+
+  async getAllPartners(): Promise<PartnerProfile[]> {
+    try {
+      const snap = await getDocs(collection(db, 'partners'));
+      return snap.docs.map((d) => d.data() as PartnerProfile);
+    } catch (error) {
+      console.warn('Erro ao listar parceiros:', error);
+      return [];
+    }
+  },
+
+  async updatePartnerStatus(userId: string, status: 'active' | 'pending' | 'suspended'): Promise<void> {
+    try {
+      const partnerDocRef = doc(db, 'partners', userId);
+      await setDoc(partnerDocRef, { status, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'partners');
+      throw error;
+    }
   },
 };
 

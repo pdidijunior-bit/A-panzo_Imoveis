@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="pt">
   <head>
-    <!-- Configuração básica -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <meta name="color-scheme" content="light only" />
@@ -9,59 +8,93 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Ângelo Panzo Imobiliária | Comprar, Vender e Arrendar Imóveis em Angola</title>
+    <meta name="description" content="A.PANZO - Comércio & Prestação de Serviços, LDA | Imobiliária de referência em Angola. Venda, compra e arrendamento de vivendas, apartamentos, terrenos, armazéns e espaços comerciais com qualidade, rigor e confiança." />
     
-    <!-- Título oficial que vai aparecer nas pesquisas do Google -->
-    <title>A.PANZO - Imobiliária | Comércio & Prestação de Serviços, LDA</title>
-
-    <!-- Descrição completa do seu negócio -->
-    <meta name="description" content="A.PANZO - Comércio & Prestação de Serviços, LDA | Imobiliária em Angola. Venda, compra e arrendamento de apartamentos, vivendas, lojas, armazéns, escritórios e terrenos com qualidade e confiança." />
-
-    <!-- Palavras-chave para garantir que o encontrem por todas as variações de pesquisa -->
-    <meta name="keywords" content="a.panzo imoveis, panzo imoveis, panzo imóveis, a.panzo, imobiliaria panzo, imobiliaria em angola, compra de casas angola, arrendamento de vivendas angola, terrenos angola" />
-
-    <!-- Instrução para os robôs do Google indexarem o site -->
-    <meta name="robots" content="index, follow" />
-
-    <!-- Tag de verificação do Google Search Console -->
-    <meta name="google-site-verification" content="9diWDxWRRJNkUaR8jGIjX74yHUQlP73W-3V-yEKlWfQ" />
-
-    <!-- Open Graph - Otimização para partilha em redes sociais -->
-    <meta property="og:title" content="A.PANZO - Imobiliária | Comércio & Prestação de Serviços, LDA" />
-    <meta property="og:description" content="A.PANZO - Comércio & Prestação de Serviços, LDA | Imobiliária em Angola. Cuidamos do seu imóvel como se fosse nosso." />
+    <!-- OpenGraph Social Metadata -->
     <meta property="og:type" content="website" />
+    <meta property="og:title" content="Ângelo Panzo Imobiliária | Comprar, Vender e Arrendar Imóveis em Angola" />
+    <meta property="og:description" content="A.PANZO - Comércio & Prestação de Serviços, LDA. Cuidamos do seu imóvel como se fosse nosso com rigor jurídico e qualidade." />
     <meta property="og:locale" content="pt_AO" />
-    <meta property="og:url" content="https://anpanzo.com" />
-    <meta property="og:image" content="https://anpanzo.com/og-image.png" />
-    
+    <meta property="og:site_name" content="A.PANZO Imobiliária" />
+    <meta property="og:url" content="https://anpanzo.com/" />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1200&q=80" />
+
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="A.PANZO - Imobiliária | Comércio & Prestação de Serviços, LDA" />
-    <meta name="twitter:description" content="Venda, compra e arrendamento de imóveis em Angola com qualidade e confiança." />
-    <meta name="twitter:image" content="https://anpanzo.com/og-image.png" />
+    <meta name="twitter:title" content="Ângelo Panzo Imobiliária | Imóveis em Angola" />
+    <meta name="twitter:description" content="Venda, compra e arrendamento de apartamentos, vivendas, lojas e terrenos em Angola com qualidade e confiança." />
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=1200&q=80" />
 
-    <!-- Canonical Link - Evita conteúdo duplicado -->
-    <link rel="canonical" href="https://anpanzo.com" />
-
-    <!-- Fonts -->
+    <!-- Resource Preconnects for High Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+    <link rel="dns-prefetch" href="https://images.unsplash.com">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Structured Data - Schema.org (JSON-LD) -->
+
+    <!-- Schema.org Rich Snippets (WebSite with SearchAction + RealEstateAgent) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "RealEstateAgent",
-      "name": "A.PANZO - Comércio & Prestação de Serviços, LDA (Imobiliária)",
-      "telephone": "+244925883080",
-      "url": "https://anpanzo.com",
-      "email": "comercial@anpanzo.com",
-      "address": {
-        "@type": "PostalAddress",
-        "addressCountry": "AO",
-        "addressRegion": "Luanda"
-      },
-      "description": "A.PANZO Imobiliária - Serviços com qualidade e confiança em Angola. Venda, compra e arrendamento de apartamentos, vivendas, lojas, armazéns, escritórios e terrenos."
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://anpanzo.com/#website",
+          "url": "https://anpanzo.com/",
+          "name": "Ângelo Panzo Imobiliária",
+          "description": "Comprar, Vender e Arrendar Imóveis em Angola com qualidade, rigor e confiança.",
+          "inLanguage": "pt-AO",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://anpanzo.com/?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "RealEstateAgent",
+          "@id": "https://anpanzo.com/#realestateagent",
+          "name": "Ângelo Panzo Imobiliária",
+          "legalName": "A.PANZO - Comércio & Prestação de Serviços, LDA",
+          "alternateName": ["A.PANZO Imóveis", "Ângelo Panzo Imóveis"],
+          "url": "https://anpanzo.com",
+          "telephone": "+244925883080",
+          "email": "comercial@anpanzo.com",
+          "priceRange": "$$",
+          "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "AO",
+            "addressRegion": "Luanda",
+            "streetAddress": "Luanda, Angola"
+          },
+          "openingHoursSpecification": [
+            {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+              "opens": "08:00",
+              "closes": "18:00"
+            }
+          ],
+          "areaServed": [
+            {
+              "@type": "Country",
+              "name": "Angola"
+            },
+            {
+              "@type": "AdministrativeArea",
+              "name": "Luanda"
+            },
+            {
+              "@type": "AdministrativeArea",
+              "name": "Malanje"
+            }
+          ],
+          "description": "A.PANZO Imobiliária - Serviços com qualidade e confiança em Angola. Venda, compra e arrendamento de apartamentos, vivendas, lojas, armazéns, escritórios e terrenos."
+        }
+      ]
     }
     </script>
   </head>

@@ -67,3 +67,5 @@ export function formatNumber(amount: number | undefined | null): string {
     }
   }
 }
+
+export const formatKzPrice = formatCurrency;

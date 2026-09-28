@@ -20,6 +20,7 @@ interface FooterProps {
   onOpenLegal: (type: 'terms' | 'privacy') => void;
   onOpenAdmin: () => void;
   onSelectDealType: (dealType: 'venda' | 'arrendamento') => void;
+  onOpenPartners?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
@@ -28,6 +29,7 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenLegal,
   onOpenAdmin,
   onSelectDealType,
+  onOpenPartners,
 }) => {
   const cleanWhatsapp = (settings.whatsapp || '+244 925 883 080').replace(/[^0-9]/g, '');
 
@@ -38,8 +40,8 @@ export const Footer: React.FC<FooterProps> = ({
   const phones = [
     settings.phone || '+244 925 883 080',
     settings.phone2 || '+244 928 771 808',
-    settings.phone3 || '+244 952 644 332',
-  ];
+    settings.phone3,
+  ].filter((p): p is string => Boolean(p && !p.includes('952')));
 
   const emails = [
     settings.email || 'comercial@anpanzo.com',
@@ -121,6 +123,16 @@ export const Footer: React.FC<FooterProps> = ({
                   Sobre a A.PANZO Imobiliária
                 </button>
               </li>
+              {onOpenPartners && (
+                <li>
+                  <button
+                    onClick={onOpenPartners}
+                    className="hover:text-amber-300 text-amber-200/90 font-semibold transition-colors flex items-center gap-1"
+                  >
+                    <span>Área de Parceiros (B2B)</span>
+                  </button>
+                </li>
+              )}
               <li>
                 <button
                   onClick={() => onOpenLegal('terms')}
