@@ -1,23 +1,20 @@
 # robots.txt - A.PANZO Imobiliária
-# Arquivo de configuração para otimizar o rastreamento de motores de busca
+# Arquivo de configuração para otimizar o rastreamento e indexação no Google e outros motores de busca
 
-# Regras gerais para todos os bots
+# Regras gerais para todos os motores de busca
 User-agent: *
 Allow: /
 Disallow: /node_modules/
 Disallow: /src/
 Disallow: /.git/
-Disallow: /.env
-Disallow: /.env.local
+Disallow: /.env*
 Disallow: /dist/
 Disallow: /build/
 Disallow: /*.map
-Disallow: /*?*sort=
-Disallow: /*?*filter=
 Disallow: /admin/
 Disallow: /private/
 
-# Permitir rastreamento de ativos estáticos
+# Permitir rastreamento de todos os ativos estáticos
 Allow: /public/
 Allow: *.js
 Allow: *.css
@@ -31,23 +28,33 @@ Allow: *.woff
 Allow: *.woff2
 Allow: *.ttf
 
-# Configuração específica para Google
+# Configuração de prioridade para o Googlebot (Zero delay, máxima eficiência)
 User-agent: Googlebot
 Allow: /
 Disallow: /node_modules/
 Disallow: /src/
 Disallow: /.git/
+Disallow: /admin/
 Crawl-delay: 0
 
-# Configuração específica para Bing
+# Rastreamento de Imagens para o Google Imagens
+User-agent: Googlebot-Image
+Allow: /
+Allow: /*.jpg
+Allow: /*.jpeg
+Allow: /*.png
+Allow: /*.webp
+
+# Configuração para Bingbot
 User-agent: Bingbot
 Allow: /
 Disallow: /node_modules/
 Disallow: /src/
 Disallow: /.git/
+Disallow: /admin/
 Crawl-delay: 1
 
-# Bloquear bots maliciosos e desnecessários
+# Bloquear bots maliciosos e de raspagem pesada
 User-agent: MJ12bot
 Disallow: /
 
@@ -60,14 +67,5 @@ Disallow: /
 User-agent: DotBot
 Disallow: /
 
-# Sitemap - Será criado posteriormente
-# Sitemap: https://anpanzo.com/sitemap.xml
-
-# Tempo de espera entre requisições (em segundos)
-Crawl-delay: 1
-Request-rate: 1/1s
-
-# Comentários úteis
-# Allow: Permite rastreamento
-# Disallow: Bloqueia rastreamento
-# Crawl-delay: Intervalo mínimo entre requisições (em segundos)
+# Sitemap Oficial do Site
+Sitemap: https://anpanzo.com/sitemap.xml

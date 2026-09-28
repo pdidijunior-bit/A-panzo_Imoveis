@@ -1,3 +1,71 @@
+# robots.txt - A.PANZO Imobiliária
+# Arquivo de configuração para otimizar o rastreamento e indexação no Google e outros motores de busca
+
+# Regras gerais para todos os motores de busca
 User-agent: *
 Allow: /
-Sitemap: https://aliancaimobiliaria.ao/sitemap.xml
+Disallow: /node_modules/
+Disallow: /src/
+Disallow: /.git/
+Disallow: /.env*
+Disallow: /dist/
+Disallow: /build/
+Disallow: /*.map
+Disallow: /admin/
+Disallow: /private/
+
+# Permitir rastreamento de todos os ativos estáticos
+Allow: /public/
+Allow: *.js
+Allow: *.css
+Allow: *.png
+Allow: *.jpg
+Allow: *.jpeg
+Allow: *.gif
+Allow: *.svg
+Allow: *.webp
+Allow: *.woff
+Allow: *.woff2
+Allow: *.ttf
+
+# Configuração de prioridade para o Googlebot (Zero delay, máxima eficiência)
+User-agent: Googlebot
+Allow: /
+Disallow: /node_modules/
+Disallow: /src/
+Disallow: /.git/
+Disallow: /admin/
+Crawl-delay: 0
+
+# Rastreamento de Imagens para o Google Imagens
+User-agent: Googlebot-Image
+Allow: /
+Allow: /*.jpg
+Allow: /*.jpeg
+Allow: /*.png
+Allow: /*.webp
+
+# Configuração para Bingbot
+User-agent: Bingbot
+Allow: /
+Disallow: /node_modules/
+Disallow: /src/
+Disallow: /.git/
+Disallow: /admin/
+Crawl-delay: 1
+
+# Bloquear bots maliciosos e de raspagem pesada
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# Sitemap Oficial do Site
+Sitemap: https://anpanzo.com/sitemap.xml
