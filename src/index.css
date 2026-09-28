@@ -13,6 +13,10 @@
 html {
   color-scheme: light only;
   background-color: #FFFFFF;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  width: 100%;
 }
 
 body {
@@ -23,6 +27,33 @@ body {
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
   forced-color-adjust: none;
+  max-width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  width: 100%;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  box-sizing: border-box;
+}
+
+img {
+  image-rendering: -webkit-optimize-contrast;
+  max-width: 100%;
+  height: auto;
+}
+
+/* GPU Accelerated & Anti-Flickering Layer */
+.destaque-ticker-container,
+.destaque-img,
+article.group,
+[role="dialog"] {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .font-brand-display {

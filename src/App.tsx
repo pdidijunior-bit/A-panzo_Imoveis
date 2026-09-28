@@ -201,7 +201,7 @@ function MainContent({
   const cleanWhatsapp = (settings?.whatsapp || '+244 925 883 080').replace(/[^0-9]/g, '');
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-brand-body selection:bg-amber-400 selection:text-slate-950">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden relative flex flex-col bg-slate-50 text-slate-900 font-brand-body selection:bg-amber-400 selection:text-slate-950">
       {/* 1. Notice / Eye-Catching Marquee Banner */}
       <MarqueeBanner
         notice={settings.marqueeNotice || ''}

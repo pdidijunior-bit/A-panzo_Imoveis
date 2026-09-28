@@ -70,10 +70,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   const effectiveUnreadCount = favContext.unreadCount;
 
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 15);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setIsScrolled(window.scrollY > 15);
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -182,31 +189,31 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </nav>
 
-            {/* Direct Contact Buttons (Desktop) - Unified hierarchy: Primary (WhatsApp) + Secondary (Call) + Support */}
-            <div className="hidden sm:flex items-center gap-2.5 xl:gap-3 ml-auto">
-              {/* WhatsApp Direct (Primary Action - Green) */}
+            {/* Direct Contact Buttons (Desktop - lg and above) */}
+            <div className="hidden lg:flex items-center gap-2 xl:gap-3 ml-auto">
+              {/* WhatsApp Direct (Primary Action) */}
               <a
                 href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá A.PANZO Imobiliária! Gostaria de consultar informações sobre os imóveis disponíveis.')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-semibold text-xs tracking-wide px-4 py-2.5 rounded-xl transition-all shadow-xs"
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-semibold text-xs tracking-wide px-3.5 py-2.5 rounded-xl transition-all shadow-xs"
                 title="Fale Connosco no WhatsApp"
               >
                 <MessageCircle className="w-4 h-4 text-white" />
-                <span className="whitespace-nowrap">Fale Connosco</span>
+                <span className="whitespace-nowrap">WhatsApp</span>
               </a>
 
-              {/* Phone Call (Secondary Action - Clean Outline/Subtle) */}
+              {/* Phone Call */}
               <a
                 href={`tel:${phone}`}
-                className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 active:scale-98 text-slate-700 hover:text-slate-950 font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 transition-all shadow-xs"
+                className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 active:scale-98 text-slate-700 hover:text-slate-950 font-semibold text-xs px-3 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 transition-all shadow-xs"
                 title={`Ligar para ${phone}`}
               >
                 <Phone className="w-3.5 h-3.5 text-[#0052A5]" />
-                <span className="whitespace-nowrap">Ligar Agora</span>
+                <span className="whitespace-nowrap">Ligar</span>
               </a>
 
-              {/* Real-Time Chat Assistant Trigger (Quiet Helper) */}
+              {/* Real-Time Chat Assistant Trigger */}
               <button
                 onClick={onOpenChat}
                 className="inline-flex items-center gap-1.5 bg-slate-50 hover:bg-blue-50 text-[#0052A5] font-semibold text-xs px-3 py-2.5 rounded-xl transition-all border border-slate-200 hover:border-blue-300 cursor-pointer"
@@ -276,8 +283,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title="Área do Cliente"
               >
                 <UserIcon className="w-3.5 h-3.5 text-[#0052A5]" />
-                <span className="hidden 2xl:inline">
-                  {currentUser ? currentUser.displayName?.split(' ')[0] || 'Conta' : 'Área do Cliente'}
+                <span className="hidden xl:inline">
+                  {currentUser ? currentUser.displayName?.split(' ')[0] || 'Conta' : 'Conta'}
                 </span>
               </button>
 
@@ -296,13 +303,26 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
 
-            {/* Mobile Actions Header */}
-            <div className="flex sm:hidden items-center gap-1.5">
-              {/* Mobile Heart button */}
+            {/* Mobile & Tablet Header Actions (visible on screens below lg) */}
+            <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 ml-auto">
+              {/* WhatsApp Quick Direct Button (hidden on narrow screens, visible on sm and up) */}
+              <a
+                href={`https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Olá A.PANZO Imobiliária! Gostaria de consultar informações sobre os imóveis.')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3 py-2 rounded-xl transition-all shadow-xs"
+                title="WhatsApp"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-white" />
+                <span>WhatsApp</span>
+              </a>
+
+              {/* Favorites Heart button */}
               <button
                 onClick={() => openUserDashboard('favorites')}
-                className="relative p-2 text-slate-700 bg-slate-100 rounded-lg cursor-pointer"
+                className="relative p-2 text-slate-700 bg-slate-100 hover:bg-rose-50 rounded-xl cursor-pointer"
                 title="Favoritos"
+                aria-label="Meus Favoritos"
               >
                 <Heart
                   className={`w-4 h-4 ${
@@ -316,11 +336,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </button>
 
-              {/* Mobile Chat Trigger */}
+              {/* Chat Support Trigger */}
               <button
                 onClick={onOpenChat}
-                className="p-2 text-[#0052A5] bg-blue-50 rounded-lg"
-                title="Apoio"
+                className="p-2 text-[#0052A5] bg-blue-50 hover:bg-blue-100 rounded-xl cursor-pointer"
+                title="Apoio ao Cliente"
+                aria-label="Apoio ao Cliente"
               >
                 <Headphones className="w-4 h-4" />
               </button>
@@ -328,8 +349,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Mobile Menu Toggle Button */}
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 rounded-lg text-slate-700 hover:bg-slate-100 focus:outline-hidden"
-                aria-label="Abrir menu"
+                className="p-2 rounded-xl text-slate-700 hover:bg-slate-100 focus:outline-hidden cursor-pointer"
+                aria-label={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
               >
                 {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>

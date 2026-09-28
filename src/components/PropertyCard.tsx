@@ -50,7 +50,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const coverImage =
     property.images && property.images.length > 0
       ? property.images[0]
-      : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1000&q=80';
+      : 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&fm=webp&w=1000&q=82';
 
   return (
     <article className="group bg-white rounded-2xl border border-slate-200 hover:border-[#0052A5]/50 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden">

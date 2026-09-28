@@ -92,7 +92,7 @@ export const FeaturedNewsTicker: React.FC<FeaturedNewsTickerProps> = ({
   const photoUrl =
     currentProperty.images && currentProperty.images.length > 0
       ? currentProperty.images[0]
-      : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80';
+      : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&fm=webp&w=600&q=82';
 
   return (
     <div

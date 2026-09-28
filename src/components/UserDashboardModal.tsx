@@ -169,49 +169,49 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex items-center gap-2 mt-5 overflow-x-auto pb-1 scrollbar-none">
+          {/* Navigation Tabs with flexible wrap for mobile screens */}
+          <div className="flex flex-wrap items-center gap-2 mt-5 pb-1 w-full">
             <button
               id="dashboard-tab-favorites"
               onClick={() => setDashboardTab('favorites')}
-              className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all whitespace-nowrap ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all flex-1 sm:flex-initial cursor-pointer ${
                 dashboardTab === 'favorites'
                   ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
                   : 'bg-white/10 text-slate-300 hover:bg-white/15'
               }`}
             >
               <Heart
-                className={`w-4 h-4 ${
+                className={`w-4 h-4 shrink-0 ${
                   dashboardTab === 'favorites' ? 'fill-rose-600 text-rose-600' : 'text-slate-300'
                 }`}
               />
-              Favoritos ({favoriteIds.length})
+              <span className="whitespace-nowrap">Favoritos ({favoriteIds.length})</span>
             </button>
 
             <button
               id="dashboard-tab-alerts"
               onClick={() => setDashboardTab('alerts')}
-              className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all whitespace-nowrap ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all flex-1 sm:flex-initial cursor-pointer ${
                 dashboardTab === 'alerts'
                   ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
                   : 'bg-white/10 text-slate-300 hover:bg-white/15'
               }`}
             >
-              <Bell className="w-4 h-4" />
-              Alertas de Pesquisa ({alerts.length})
+              <Bell className="w-4 h-4 shrink-0" />
+              <span className="whitespace-nowrap">Alertas ({alerts.length})</span>
             </button>
 
             <button
               id="dashboard-tab-notifications"
               onClick={() => setDashboardTab('notifications')}
-              className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all whitespace-nowrap relative ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all flex-1 sm:flex-initial cursor-pointer relative ${
                 dashboardTab === 'notifications'
                   ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
                   : 'bg-white/10 text-slate-300 hover:bg-white/15'
               }`}
             >
-              <BellRing className="w-4 h-4" />
-              Notificações
+              <BellRing className="w-4 h-4 shrink-0" />
+              <span className="whitespace-nowrap">Notificações</span>
               {unreadCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-extrabold animate-pulse">
                   {unreadCount}
@@ -222,14 +222,14 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
             <button
               id="dashboard-tab-profile"
               onClick={() => setDashboardTab('profile')}
-              className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all whitespace-nowrap ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all flex-1 sm:flex-initial cursor-pointer ${
                 dashboardTab === 'profile'
                   ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20'
                   : 'bg-white/10 text-slate-300 hover:bg-white/15'
               }`}
             >
-              <UserIcon className="w-4 h-4" />
-              Minha Conta
+              <UserIcon className="w-4 h-4 shrink-0" />
+              <span className="whitespace-nowrap">Minha Conta</span>
             </button>
           </div>
         </div>

@@ -281,10 +281,10 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 text-slate-900 pb-16">
       {/* Top Banner / Breadcrumb */}
-      <div className="bg-[#001F3F] text-white border-b border-[#003366] py-8 sm:py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full bg-[#001F3F] text-white border-b border-[#003366] py-8 sm:py-10">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-200 text-xs font-bold uppercase tracking-wider mb-2 border border-blue-400/30">
@@ -310,56 +310,56 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
           </div>
 
           {/* Navigation Sub-Tabs */}
-          <div className="flex items-center gap-2 mt-6 overflow-x-auto pb-1">
+          <div className="flex flex-wrap items-center gap-2 mt-6 pb-1 w-full">
             {isPartner && (
               <button
                 onClick={() => setActiveTab('listings')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer flex-1 sm:flex-initial text-center ${
                   activeTab === 'listings'
                     ? 'bg-[#0052A5] text-white shadow-md'
                     : 'bg-white/10 hover:bg-white/20 text-slate-200'
                 }`}
               >
-                <Building2 className="w-4 h-4" />
+                <Building2 className="w-4 h-4 shrink-0" />
                 <span>Os Meus Imóveis ({myProperties.length})</span>
               </button>
             )}
 
             <button
               onClick={() => setActiveTab('favorites')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer flex-1 sm:flex-initial text-center ${
                 activeTab === 'favorites'
                   ? 'bg-[#0052A5] text-white shadow-md'
                   : 'bg-white/10 hover:bg-white/20 text-slate-200'
               }`}
             >
-              <Heart className="w-4 h-4 text-rose-300 fill-rose-300/30" />
+              <Heart className="w-4 h-4 text-rose-300 fill-rose-300/30 shrink-0" />
               <span>Favoritos Guardados ({myFavoritedProperties.length})</span>
             </button>
 
             <button
               onClick={() => setActiveTab('profile')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer flex-1 sm:flex-initial text-center ${
                 activeTab === 'profile'
                   ? 'bg-[#0052A5] text-white shadow-md'
                   : 'bg-white/10 hover:bg-white/20 text-slate-200'
               }`}
             >
-              <ShieldCheck className="w-4 h-4" />
+              <ShieldCheck className="w-4 h-4 shrink-0" />
               <span>{isPartner ? 'Dados da Empresa' : 'Aderir à Parceria (Cadastro)'}</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         {/* ======================================================== */}
         {/* TAB 1: LISTINGS (MY PROPERTIES)                         */}
         {/* ======================================================== */}
         {activeTab === 'listings' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-              <div>
+          <div className="space-y-6 w-full">
+            <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-xs">
+              <div className="min-w-0 flex-1">
                 <h2 className="font-brand-display text-lg font-bold text-slate-900">
                   Gestão dos Meus Imóveis
                 </h2>
@@ -370,7 +370,7 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
 
               <button
                 onClick={openNewPropertyModal}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0052A5] hover:bg-[#003366] text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 bg-[#0052A5] hover:bg-[#003366] text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4" />
                 <span>Publicar Novo Imóvel</span>

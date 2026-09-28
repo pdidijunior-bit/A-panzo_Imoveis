@@ -50,9 +50,9 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({
   const selectedLocation = locations.find((l) => l.province === filterState.province);
   const availableMunicipalities = selectedLocation ? selectedLocation.municipalities : [];
 
-  // Warm, sunny, real-tone architectural hero image
+  // Warm, sunny, real-tone architectural hero image with high efficiency WebP format
   const defaultHeroBg =
-    'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=2000&q=80';
+    'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&fm=webp&w=2000&q=82';
 
   const activeFiltersCount = [
     filterState.keyword,
@@ -72,14 +72,16 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({
   };
 
   return (
-    <section className="relative min-h-[620px] lg:min-h-[690px] flex items-center justify-center overflow-hidden bg-slate-950 py-14 sm:py-20 lg:py-24">
-      {/* Hero Background Image with warm, real-tone natural treatment (no dark blue wash) */}
-      <div className="absolute inset-0 z-0">
+    <section className="relative min-h-[620px] lg:min-h-[690px] w-full max-w-full overflow-x-hidden flex items-center justify-center bg-slate-950 py-14 sm:py-20 lg:py-24">
+      {/* Hero Background Image with warm, real-tone natural treatment and high-priority fetch */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
         <img
           src={heroBannerImage || defaultHeroBg}
           alt="A.PANZO Imobiliária - Imóveis em Angola"
           loading="eager"
           decoding="async"
+          // @ts-ignore
+          fetchPriority="high"
           className="w-full h-full object-cover object-center transform scale-105 transition-transform duration-1000 ease-out"
         />
         {/* Soft, warm contrast overlay that maintains authentic sunlight and color vibrancy */}
@@ -132,13 +134,13 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({
         )}
 
         {/* Smart Search Bar & Filter Container */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/60 max-w-5xl mx-auto">
+        <div className="w-full bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-8 border border-white/60 max-w-5xl mx-auto overflow-hidden sm:overflow-visible">
           {/* Deal Type Switcher Tabs (Todos / Comprar / Arrendar) */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
-            <div className="flex items-center p-1 bg-slate-100 rounded-xl">
+            <div className="flex items-center p-1 bg-slate-100 rounded-xl w-full sm:w-auto">
               <button
                 onClick={() => onFilterChange({ dealType: 'todos' })}
-                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial text-center px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   filterState.dealType === 'todos'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -149,7 +151,7 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({
 
               <button
                 onClick={() => onFilterChange({ dealType: 'venda' })}
-                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial text-center px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   filterState.dealType === 'venda'
                     ? 'bg-[#0052A5] text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -160,7 +162,7 @@ export const HeroSearch: React.FC<HeroSearchProps> = ({
 
               <button
                 onClick={() => onFilterChange({ dealType: 'arrendamento' })}
-                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial text-center px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   filterState.dealType === 'arrendamento'
                     ? 'bg-[#0052A5] text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
