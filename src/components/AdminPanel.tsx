@@ -117,6 +117,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [propVideoUrl, setPropVideoUrl] = useState('');
   const [isProcessingMedia, setIsProcessingMedia] = useState(false);
   const [mediaUploadProgress, setMediaUploadProgress] = useState<string | null>(null);
+  const [mediaUploadPercent, setMediaUploadPercent] = useState<number>(0);
+  const adminFileInputRef = useRef<HTMLInputElement>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [isSavingProperty, setIsSavingProperty] = useState(false);
@@ -282,26 +284,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setPropertyModalOpen(true);
   };
 
-  // Multiple Photo Upload from Device Gallery with Client Compression
+  // Multiple Photo Upload from Device Gallery with Client Compression & Batching (15+ Photos)
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setIsProcessingMedia(true);
-    setMediaUploadProgress(`A processar ${files.length} fotografia(s) da galeria...`);
-
-    const newCompressedImages: string[] = [];
+    setMediaUploadProgress(`A preparar ${files.length} fotografia(s)...`);
+    setMediaUploadPercent(0);
+    setFormError(null);
 
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setMediaUploadProgress(`A otimizar fotografia ${i + 1} de ${files.length}...`);
-        const compressedDataUrl = await compressImageFile(file, 1280, 1280, 0.75);
-        newCompressedImages.push(compressedDataUrl);
-      }
+      const newUploadedImages = await dbService.uploadBatchPropertyImages(
+        files,
+        (progress) => {
+          setMediaUploadProgress(progress.message);
+          setMediaUploadPercent(progress.percent);
+        }
+      );
 
-      setPropImages((prev) => [...prev, ...newCompressedImages]);
-      setMediaUploadProgress(null);
+      setPropImages((prev) => [...prev, ...newUploadedImages]);
     } catch (err: any) {
       console.error('Erro no upload de fotos:', err);
       setFormError(err.message || 'Falha ao processar imagens da galeria.');
@@ -1872,21 +1874,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
       {/* Property Publish & Edit Modal */}
       {propertyModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6">
-          <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden my-6 border border-slate-200 flex flex-col max-h-[92vh]">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 sticky top-0 z-10">
-              <h3 className="font-brand-display text-lg font-bold text-slate-900">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-6 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-3xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-auto sm:my-6 border border-slate-200 flex flex-col h-[95vh] sm:h-auto sm:max-h-[90vh]">
+            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0 z-10">
+              <h3 className="font-brand-display text-base sm:text-lg font-bold text-slate-900">
                 {editingPropertyId ? 'Editar Imóvel' : 'Publicar Novo Imóvel'}
               </h3>
               <button
+                type="button"
                 onClick={() => setPropertyModalOpen(false)}
-                className="p-1.5 text-slate-500 hover:text-slate-900 rounded-full hover:bg-slate-200"
+                className="p-2 text-slate-500 hover:text-slate-900 rounded-full hover:bg-slate-200 cursor-pointer touch-manipulation"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProperty} className="p-6 overflow-y-auto space-y-5 flex-1 text-xs">
+            <form onSubmit={handleSaveProperty} className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1 text-xs -webkit-overflow-scrolling-touch">
               {formError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -2120,53 +2123,97 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               </div>
 
-              {/* Photos Upload from Device Gallery (No Firebase Storage required) */}
+              {/* Photos Upload from Device Gallery (Supports 15+ photos) */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <label className="font-bold uppercase text-slate-700 block">
-                      Fotografias da Galeria ({propImages.length} selecionadas)
+                    <label className="font-bold uppercase text-slate-700 block text-xs">
+                      Fotografias do Imóvel ({propImages.length} selecionadas)
                     </label>
                     <p className="text-[11px] text-slate-500">
-                      Upload direto da galeria com compressão automática sem custos de Storage.
+                      Upload otimizado direto da galeria com suporte a 15+ fotos em alta definição.
                     </p>
                   </div>
 
-                  <label className="cursor-pointer bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-xs">
-                    <ImageIcon className="w-4 h-4" />
-                    <span>Adicionar Fotos</span>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handlePhotoUpload}
-                      className="hidden"
-                    />
-                  </label>
+                  <input
+                    ref={adminFileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      adminFileInputRef.current?.click();
+                    }}
+                    disabled={isProcessingMedia}
+                    className="w-full sm:w-auto cursor-pointer bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-xs touch-manipulation min-h-[42px]"
+                  >
+                    {isProcessingMedia ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                    ) : (
+                      <ImageIcon className="w-4 h-4" />
+                    )}
+                    <span>{isProcessingMedia ? 'A Processar...' : 'Adicionar Fotos da Galeria'}</span>
+                  </button>
                 </div>
 
-                {mediaUploadProgress && (
-                  <div className="p-2.5 bg-amber-100/70 border border-amber-300 rounded-xl text-amber-900 text-xs flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-amber-600" />
-                    <span>{mediaUploadProgress}</span>
+                {/* Progress bar */}
+                {isProcessingMedia && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1.5">
+                    <div className="flex items-center justify-between text-xs text-amber-950 font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                        {mediaUploadProgress || 'A processar imagens...'}
+                      </span>
+                      <span>{mediaUploadPercent}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-amber-200/60 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-amber-500 transition-all duration-200"
+                        style={{ width: `${mediaUploadPercent}%` }}
+                      />
+                    </div>
                   </div>
                 )}
 
                 {/* Thumbnail grid */}
-                {propImages.length > 0 && (
-                  <div className="flex flex-wrap gap-2.5 pt-2">
+                {propImages.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 pt-1 max-h-48 overflow-y-auto p-1">
                     {propImages.map((img, idx) => (
-                      <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border">
-                        <img src={img} alt="Foto" className="w-full h-full object-cover" />
+                      <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group bg-slate-100 shadow-2xs">
+                        <img
+                          src={img}
+                          alt={`Foto ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        {idx === 0 && (
+                          <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 font-bold text-[9px] uppercase tracking-wider">
+                            Capa
+                          </span>
+                        )}
                         <button
                           type="button"
-                          onClick={() => handleRemovePhoto(idx)}
-                          className="absolute top-1 right-1 p-1 bg-slate-950/70 text-white rounded-full hover:bg-rose-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemovePhoto(idx);
+                          }}
+                          className="absolute top-1 right-1 p-1 bg-slate-900/80 hover:bg-rose-600 text-white rounded-full transition-colors cursor-pointer shadow-xs"
+                          title="Remover foto"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
+                  </div>
+                ) : (
+                  <div className="p-4 border-2 border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400">
+                    Nenhuma fotografia carregada ainda. Toque no botão acima para selecionar fotos da galeria.
                   </div>
                 )}
               </div>
@@ -2258,25 +2305,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </div>
 
               {/* Submit & Cancel */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3 sticky bottom-0 bg-white pb-2">
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-between sm:justify-end gap-3 sticky bottom-0 bg-white pb-1 z-10">
                 <button
                   type="button"
                   onClick={() => setPropertyModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold"
+                  className="flex-1 sm:flex-initial px-4 py-3 sm:py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm text-center min-h-[44px] touch-manipulation cursor-pointer hover:bg-slate-100"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingProperty || isProcessingMedia}
-                  className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold rounded-xl shadow-md flex items-center gap-2"
+                  className="flex-1 sm:flex-initial px-6 py-3 sm:py-2.5 bg-amber-500 hover:bg-amber-400 active:scale-98 text-slate-950 font-extrabold text-xs sm:text-sm rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer touch-manipulation min-h-[44px] disabled:opacity-50"
                 >
                   {isSavingProperty ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      <span>A gravar...</span>
+                    </>
                   ) : (
-                    <CheckCircle className="w-4 h-4" />
+                    <>
+                      <CheckCircle className="w-4 h-4 shrink-0" />
+                      <span>{editingPropertyId ? 'Salvar Alterações' : 'Publicar Anúncio'}</span>
+                    </>
                   )}
-                  <span>{editingPropertyId ? 'Salvar Alterações' : 'Publicar Anúncio'}</span>
                 </button>
               </div>
             </form>

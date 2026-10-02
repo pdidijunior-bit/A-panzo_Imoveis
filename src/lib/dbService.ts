@@ -26,6 +26,7 @@ import {
 } from '../types';
 import { DEFAULT_CATEGORIES, ANGOLA_LOCATIONS, DEFAULT_SITE_SETTINGS } from './defaultData';
 import { normalizeCurrency } from './formatters';
+import { batchUploadPropertyPhotos, UploadProgressInfo } from './mediaUtils';
 
 /**
  * Recursively strips any keys whose value is undefined, which Firestore setDoc/updateDoc strictly rejects.
@@ -189,6 +190,74 @@ export const dbService = {
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
+  },
+
+  /**
+   * Utilitário assíncrono para upload em massa de imagens para o Firestore.
+   * Otimizado para processar 15+ a 30+ fotografias por imóvel sem exceder os limites
+   * do Firestore e sem travar o navegador, executando a compressão em lotes paralelos controlados.
+   */
+  async uploadBatchPropertyImages(
+    files: FileList | File[],
+    onProgress?: (progress: UploadProgressInfo) => void
+  ): Promise<string[]> {
+    return batchUploadPropertyPhotos(files, onProgress);
+  },
+
+  /**
+   * Grava um imóvel completo no Firestore integrando o upload em lote de 15+ imagens.
+   * Processa todas as imagens de forma assíncrona, concatena com as já existentes e salva o documento.
+   */
+  async savePropertyWithBatchImages(
+    propertyData: Property,
+    newFiles?: FileList | File[],
+    onProgress?: (progress: UploadProgressInfo) => void
+  ): Promise<Property> {
+    let finalImages = Array.isArray(propertyData.images) ? [...propertyData.images] : [];
+
+    if (newFiles && newFiles.length > 0) {
+      const uploadedDataUrls = await this.uploadBatchPropertyImages(newFiles, onProgress);
+      finalImages = [...finalImages, ...uploadedDataUrls];
+    }
+
+    const payload: Property = {
+      ...propertyData,
+      images: finalImages,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await this.saveProperty(payload);
+    return payload;
+  },
+
+  /**
+   * Anexa um novo lote de imagens (15+ fotos) diretamente a um imóvel existente no Firestore.
+   */
+  async appendPropertyImages(
+    propertyId: string,
+    newFiles: FileList | File[],
+    onProgress?: (progress: UploadProgressInfo) => void
+  ): Promise<string[]> {
+    const propertyDocRef = doc(db, 'properties', propertyId);
+    const snap = await getDoc(propertyDocRef);
+    if (!snap.exists()) {
+      throw new Error(`Imóvel com id "${propertyId}" não foi encontrado no Firestore.`);
+    }
+
+    const currentImages: string[] = snap.data().images || [];
+    const newUploaded = await this.uploadBatchPropertyImages(newFiles, onProgress);
+    const combinedImages = [...currentImages, ...newUploaded];
+
+    await setDoc(
+      propertyDocRef,
+      {
+        images: combinedImages,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    return combinedImages;
   },
 
   async deleteProperty(propertyId: string): Promise<void> {

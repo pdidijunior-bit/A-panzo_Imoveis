@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Building2,
   Plus,
@@ -20,6 +20,9 @@ import {
   MessageCircle,
   X,
   Sparkles,
+  Image as ImageIcon,
+  Loader2,
+  UploadCloud,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFavoritesAndAlerts } from '../context/FavoritesAndAlertsContext';
@@ -83,9 +86,13 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
   const [propArea, setPropArea] = useState<number | ''>(120);
   const [propDescription, setPropDescription] = useState('');
   const [propFeatures, setPropFeatures] = useState<string[]>([]);
-  const [propImagesText, setPropImagesText] = useState('');
+  const [propImages, setPropImages] = useState<string[]>([]);
+  const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
+  const [photoUploadProgress, setPhotoUploadProgress] = useState<string | null>(null);
+  const [photoUploadPercent, setPhotoUploadPercent] = useState<number>(0);
   const [propSaveError, setPropSaveError] = useState<string | null>(null);
   const [isSavingProp, setIsSavingProp] = useState(false);
+  const partnerFileInputRef = useRef<HTMLInputElement>(null);
 
   // Partner's own properties
   const myProperties = useMemo(() => {
@@ -105,6 +112,39 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
   // Municipalities for selected province in property form
   const selectedLocation = locations.find((l) => l.province === propProvince);
   const availableMunicipalities = selectedLocation ? selectedLocation.municipalities : [];
+
+  // Handle native multiple photo upload from gallery for partner (15+ photos)
+  const handlePartnerPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsProcessingPhotos(true);
+    setPhotoUploadProgress(`A carregar ${files.length} fotografia(s)...`);
+    setPhotoUploadPercent(0);
+    setPropSaveError(null);
+
+    try {
+      const uploadedUrls = await dbService.uploadBatchPropertyImages(
+        files,
+        (progress) => {
+          setPhotoUploadProgress(progress.message);
+          setPhotoUploadPercent(progress.percent);
+        }
+      );
+      setPropImages((prev) => [...prev, ...uploadedUrls]);
+    } catch (err: any) {
+      console.error('Erro ao enviar fotografias do parceiro:', err);
+      setPropSaveError(err.message || 'Falha ao processar imagens selecionadas.');
+    } finally {
+      setIsProcessingPhotos(false);
+      setPhotoUploadProgress(null);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemovePartnerPhoto = (index: number) => {
+    setPropImages((prev) => prev.filter((_, idx) => idx !== index));
+  };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,7 +198,7 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
     setPropArea(120);
     setPropDescription('');
     setPropFeatures(['Água da Rede Pública', 'Gerador Elétrico / PT Próprio', 'Segurança 24h / Guarita']);
-    setPropImagesText('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80');
+    setPropImages([]);
     setPropSaveError(null);
     setIsPropertyModalOpen(true);
   };
@@ -184,7 +224,7 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
     setPropArea(p.area || 0);
     setPropDescription(p.description || '');
     setPropFeatures(p.features || []);
-    setPropImagesText((p.images || []).join('\n'));
+    setPropImages(p.images && p.images.length > 0 ? p.images : []);
     setPropSaveError(null);
     setIsPropertyModalOpen(true);
   };
@@ -204,13 +244,9 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
       return;
     }
 
-    const imagesArray = propImagesText
-      .split('\n')
-      .map((url) => url.trim())
-      .filter((url) => url.length > 5);
-
-    if (imagesArray.length === 0) {
-      imagesArray.push('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80');
+    if (propImages.length === 0) {
+      setPropSaveError('Por favor adicione pelo menos 1 fotografia do imóvel diretamente da sua galeria.');
+      return;
     }
 
     const matchedCat = categories.find((c) => c.slug === propCategory);
@@ -240,7 +276,7 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
         status: 'disponivel',
         // RESTRICTION: Partners CANNOT highlight (isFeatured) properties!
         isFeatured: false,
-        images: imagesArray,
+        images: propImages,
         createdAt: editingPropertyId ? (catalogProperties.find((p) => p.id === editingPropertyId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         publishedBy: currentUser.uid,
@@ -1018,33 +1054,122 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
-                  URLs das Fotos (uma por linha)
-                </label>
-                <textarea
-                  rows={2}
-                  value={propImagesText}
-                  onChange={(e) => setPropImagesText(e.target.value)}
-                  placeholder="https://...&#10;https://..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-mono"
-                />
+              {/* Fotografias da Galeria (15+ fotos com compressão nativa) */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="text-xs font-bold uppercase text-slate-700 block">
+                      Fotografias do Imóvel ({propImages.length} selecionadas) *
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Envie 15+ fotos direto da galeria do seu telemóvel ou computador.
+                    </p>
+                  </div>
+
+                  <input
+                    ref={partnerFileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handlePartnerPhotoUpload}
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      partnerFileInputRef.current?.click();
+                    }}
+                    disabled={isProcessingPhotos}
+                    className="w-full sm:w-auto px-4 py-2.5 bg-[#0052A5] hover:bg-[#003366] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer touch-manipulation min-h-[42px]"
+                  >
+                    {isProcessingPhotos ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <UploadCloud className="w-4 h-4" />
+                    )}
+                    <span>{isProcessingPhotos ? 'A Processar...' : 'Adicionar Fotos da Galeria'}</span>
+                  </button>
+                </div>
+
+                {/* Progress bar */}
+                {isProcessingPhotos && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-1.5">
+                    <div className="flex items-center justify-between text-xs text-blue-900 font-bold">
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0052A5]" />
+                        {photoUploadProgress || 'A comprimir fotografias...'}
+                      </span>
+                      <span>{photoUploadPercent}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#0052A5] transition-all duration-200"
+                        style={{ width: `${photoUploadPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Thumbnails grid */}
+                {propImages.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 pt-1 max-h-48 overflow-y-auto p-1">
+                    {propImages.map((img, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group bg-slate-100 shadow-2xs">
+                        <img
+                          src={img}
+                          alt={`Foto ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        {idx === 0 && (
+                          <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 font-bold text-[9px] uppercase tracking-wider">
+                            Capa
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemovePartnerPhoto(idx);
+                          }}
+                          className="absolute top-1 right-1 p-1 bg-slate-900/80 hover:bg-rose-600 text-white rounded-full transition-colors cursor-pointer shadow-xs"
+                          title="Remover foto"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 border-2 border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400">
+                    Nenhuma fotografia carregada ainda. Clique no botão acima para escolher da sua galeria.
+                  </div>
+                )}
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-between sm:justify-end gap-3 sticky bottom-0 bg-white pb-1 z-10">
                 <button
                   type="button"
                   onClick={() => setIsPropertyModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="flex-1 sm:flex-initial px-4 py-3 sm:py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-slate-200 text-center min-h-[44px] touch-manipulation cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={isSavingProp}
-                  className="px-5 py-2 bg-[#0052A5] hover:bg-[#003366] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  disabled={isSavingProp || isProcessingPhotos}
+                  className="flex-1 sm:flex-initial px-6 py-3 sm:py-2.5 bg-[#0052A5] hover:bg-[#003366] text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 min-h-[44px] touch-manipulation disabled:opacity-50"
                 >
-                  {isSavingProp ? 'A gravar...' : editingPropertyId ? 'Salvar Alterações' : 'Publicar Imóvel'}
+                  {isSavingProp ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>A gravar...</span>
+                    </>
+                  ) : (
+                    <span>{editingPropertyId ? 'Salvar Alterações' : 'Publicar Imóvel'}</span>
+                  )}
                 </button>
               </div>
             </form>

@@ -61,8 +61,9 @@ export interface FirestoreErrorInfo {
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
   const currentAuth = auth.currentUser;
+  const rawMsg = error instanceof Error ? error.message : String(error);
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: rawMsg,
     operationType,
     path,
     authInfo: {
@@ -78,7 +79,20 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     },
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+
+  let friendlyMessage = rawMsg;
+  const lower = rawMsg.toLowerCase();
+  if (lower.includes('permission-denied') || lower.includes('missing or insufficient permissions')) {
+    friendlyMessage = 'Permissão negada no Firestore. Certifique-se de publicar as regras atualizadas no Firebase Console (Firestore Database > Regras).';
+  } else if (lower.includes('unavailable') || lower.includes('network') || lower.includes('failed to get document')) {
+    friendlyMessage = 'Sem ligação ao Firestore. Verifique a sua ligação à internet.';
+  } else if (lower.includes('resource-exhausted') || lower.includes('quota')) {
+    friendlyMessage = 'Limite temporário de quota do Firestore atingido. Tente novamente em instantes.';
+  }
+
+  const enhancedError = new Error(friendlyMessage);
+  (enhancedError as any).details = errInfo;
+  throw enhancedError;
 }
 
 // Validation of Firestore connection on boot

@@ -9,6 +9,44 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 
+    <style>
+      vite-error-overlay,
+      #vite-plugin-checker-error-overlay,
+      [data-vite-dev-overlay] {
+        display: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+      }
+    </style>
+    <script>
+      (function() {
+        if (typeof customElements !== 'undefined') {
+          try {
+            var orig = customElements.define;
+            customElements.define = function(name, ctor, opts) {
+              if (name === 'vite-error-overlay') {
+                class CleanOverlay extends HTMLElement {
+                  connectedCallback() {
+                    this.style.display = 'none';
+                    if (this.parentNode) this.parentNode.removeChild(this);
+                  }
+                }
+                return orig.call(customElements, name, CleanOverlay, opts);
+              }
+              return orig.call(customElements, name, ctor, opts);
+            };
+          } catch(e) {}
+        }
+        window.addEventListener('error', function(e) {
+          if (e && e.message && (e.message.indexOf('websocket') !== -1 || e.message.indexOf('WebSocket') !== -1)) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        }, true);
+      })();
+    </script>
+
     <!-- Título oficial nas pesquisas do Google -->
     <title>A.PANZO - Imobiliária | Comércio &amp; Prestação de Serviços, LDA</title>
 
