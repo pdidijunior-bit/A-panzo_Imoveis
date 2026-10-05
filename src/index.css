@@ -40,9 +40,42 @@ body {
 }
 
 img {
-  image-rendering: -webkit-optimize-contrast;
+  image-rendering: auto;
   max-width: 100%;
   height: auto;
+}
+
+/* Utilitários para exibição de imagens sem cortes com ambient background */
+.property-media-container {
+  position: relative;
+  overflow: hidden;
+  background-color: #020617;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.property-media-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(20px);
+  opacity: 0.30;
+  transform: scale(1.15);
+  pointer-events: none;
+}
+
+.property-media-img {
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto;
 }
 
 /* GPU Accelerated & Anti-Flickering Layer */

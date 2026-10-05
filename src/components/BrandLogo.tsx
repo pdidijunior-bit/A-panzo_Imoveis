@@ -14,18 +14,22 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   showSubtitle = true,
 }) => {
   const iconSizes = {
-    sm: 'w-8 h-8',
-    md: 'w-11 h-11',
+    sm: 'w-9 h-9',
+    md: 'w-12 h-12',
     lg: 'w-16 h-16',
   };
 
+  const [imgError, setImgError] = React.useState(false);
+  const logoSrc = customLogoUrl || '/panzo-logo.jpeg';
+
   return (
     <div className="flex items-center gap-3 select-none">
-      {customLogoUrl ? (
+      {!imgError ? (
         <img
-          src={customLogoUrl}
+          src={logoSrc}
           alt="A.PANZO - Comércio & Prestação de Serviços, LDA (Imobiliária)"
-          className={`${iconSizes[size]} object-contain`}
+          className={`${iconSizes[size]} object-contain rounded-xl shadow-xs bg-white p-0.5 border border-slate-100`}
+          onError={() => setImgError(true)}
         />
       ) : (
         <div className={`${iconSizes[size]} relative flex items-center justify-center shrink-0`}>

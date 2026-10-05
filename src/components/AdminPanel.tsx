@@ -937,16 +937,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     key={prop.id}
                     className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
                   >
-                    <div className="relative aspect-16/10 bg-slate-100">
+                    <div className="relative aspect-16/10 bg-slate-950 overflow-hidden flex items-center justify-center">
+                      <img
+                        src={
+                          prop.images?.[0] ||
+                          'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=600&q=80'
+                        }
+                        alt=""
+                        aria-hidden="true"
+                        className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 scale-110 pointer-events-none"
+                      />
                       <img
                         src={
                           prop.images?.[0] ||
                           'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=600&q=80'
                         }
                         alt={prop.title}
-                        className="w-full h-full object-cover"
+                        className="relative z-1 max-w-full max-h-full w-auto h-auto object-contain mx-auto"
                       />
-                      <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                      <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5">
                         <span className="bg-slate-950/80 backdrop-blur-xs text-amber-300 text-[10px] font-mono px-2 py-0.5 rounded font-bold">
                           {prop.code}
                         </span>

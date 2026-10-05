@@ -40,6 +40,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
 }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeMediaTab, setActiveMediaTab] = useState<'photos' | 'video'>('photos');
+  const [isFullscreenPhoto, setIsFullscreenPhoto] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const { isFavorite, toggleFavorite, openCreateAlertModal } = useFavoritesAndAlerts();
@@ -161,31 +162,64 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
             )}
 
             {activeMediaTab === 'photos' ? (
-              <div className="space-y-2">
-                {/* Main Large Photo */}
-                <div className="relative aspect-16/10 rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center">
+              <div className="space-y-3">
+                {/* Main Large Photo - 100% Uncropped Responsive Presentation */}
+                <div
+                  className="relative w-full min-h-[300px] h-[50vh] max-h-[560px] rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center select-none group border border-slate-800 shadow-inner cursor-zoom-in"
+                  onClick={() => setIsFullscreenPhoto(true)}
+                  title="Clique para visualizar em tela cheia"
+                >
+                  {/* Ambient Backdrop: smooth blur of the photo edges, eliminating harsh cutoffs */}
+                  <img
+                    src={images[activeImageIndex]}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110 pointer-events-none"
+                  />
+
+                  {/* Pristine Full Image: completely visible without cuts, respecting portrait/landscape ratio */}
                   <img
                     src={images[activeImageIndex]}
                     alt={property.title}
-                    className="w-full h-full object-contain sm:object-cover"
+                    className="relative z-10 max-h-full max-w-full w-auto h-auto object-contain mx-auto transition-transform duration-300 drop-shadow-md group-hover:scale-[1.02]"
                   />
+
+                  {/* Fullscreen Expand Action Badge */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFullscreenPhoto(true);
+                    }}
+                    className="absolute top-3 right-3 z-20 p-2 rounded-xl bg-slate-950/70 hover:bg-slate-900 text-white backdrop-blur-md border border-white/10 shadow-lg transition-all"
+                    title="Ver em tela cheia"
+                  >
+                    <Maximize2 className="w-4 h-4 text-amber-400" />
+                  </button>
+
+                  {/* Counter Badge */}
+                  <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-lg bg-slate-950/80 text-white text-xs font-mono backdrop-blur-md border border-white/10">
+                    {activeImageIndex + 1} / {images.length}
+                  </div>
 
                   {images.length > 1 && (
                     <>
                       <button
-                        onClick={() =>
-                          setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))
-                        }
-                        className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-950/70 text-white hover:bg-slate-950 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+                        }}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-950/75 text-white hover:bg-amber-500 hover:text-slate-950 transition-colors shadow-lg border border-white/10"
                         aria-label="Foto anterior"
                       >
                         <ChevronLeft className="w-5 h-5" />
                       </button>
                       <button
-                        onClick={() =>
-                          setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))
-                        }
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-950/70 text-white hover:bg-slate-950 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-950/75 text-white hover:bg-amber-500 hover:text-slate-950 transition-colors shadow-lg border border-white/10"
                         aria-label="Próxima foto"
                       >
                         <ChevronRight className="w-5 h-5" />
@@ -201,13 +235,13 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                       <button
                         key={idx}
                         onClick={() => setActiveImageIndex(idx)}
-                        className={`relative w-20 h-14 rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
+                        className={`relative w-20 h-14 rounded-xl overflow-hidden shrink-0 border-2 transition-all bg-slate-900 ${
                           activeImageIndex === idx
-                            ? 'border-amber-500 scale-95 shadow-sm'
-                            : 'border-transparent opacity-70 hover:opacity-100'
+                            ? 'border-amber-500 scale-95 shadow-md ring-2 ring-amber-500/30'
+                            : 'border-transparent opacity-60 hover:opacity-100'
                         }`}
                       >
-                        <img src={img} alt="Miniatura" className="w-full h-full object-cover" />
+                        <img src={img} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
@@ -447,6 +481,56 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Fullscreen High-Resolution Lightbox Modal */}
+      {isFullscreenPhoto && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 select-none"
+          onClick={() => setIsFullscreenPhoto(false)}
+        >
+          <button
+            onClick={() => setIsFullscreenPhoto(false)}
+            className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors"
+            title="Fechar tela cheia"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <div
+            className="relative w-full h-full max-w-6xl max-h-[88vh] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={images[activeImageIndex]}
+              alt={property.title}
+              className="max-w-full max-h-full w-auto h-auto object-contain mx-auto shadow-2xl rounded-lg"
+            />
+
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={() => setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))}
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-amber-500 hover:text-slate-950 text-white transition-colors"
+                  aria-label="Foto anterior"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={() => setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))}
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-amber-500 hover:text-slate-950 text-white transition-colors"
+                  aria-label="Próxima foto"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-black/75 text-white text-xs font-mono backdrop-blur-md border border-white/10">
+              {activeImageIndex + 1} de {images.length} • {property.title}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -55,20 +55,29 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   return (
     <article className="group bg-white rounded-2xl border border-slate-200 hover:border-[#0052A5]/50 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-col overflow-hidden">
       {/* Media & Badges Container */}
-      <div className="relative aspect-4/3 overflow-hidden bg-slate-100 cursor-pointer" onClick={() => onSelect(property)}>
+      <div className="relative aspect-4/3 overflow-hidden bg-slate-950 cursor-pointer flex items-center justify-center" onClick={() => onSelect(property)}>
+        {/* Ambient Blur Backdrop: fills edges smoothly without harsh contrast for portrait or wide photos */}
+        <img
+          src={coverImage}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover blur-md opacity-35 scale-110 pointer-events-none"
+        />
+
+        {/* Pristine Full Image: completely visible without cuts on desktop and mobile */}
         <img
           src={coverImage}
           alt={property.title}
           loading="lazy"
           decoding="async"
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
+          className="relative z-10 max-w-full max-h-full w-auto h-auto object-contain mx-auto group-hover:scale-105 transition-transform duration-500 ease-out drop-shadow-sm"
         />
 
         {/* Gradient Overlay on Bottom */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-black/30 pointer-events-none" />
+        <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-950/80 via-transparent to-black/25 pointer-events-none" />
 
         {/* Top Badges (Deal Type & Video indicator) */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
+        <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between gap-2">
           <span
             className={`text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-md ${
               property.dealType === 'venda'

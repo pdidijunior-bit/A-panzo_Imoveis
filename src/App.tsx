@@ -770,6 +770,15 @@ function MainApp() {
     return () => unsubscribe();
   }, []);
 
+  // Liberação suave do preloader assim que o carregamento inicial concluir
+  useEffect(() => {
+    if (!isLoading) {
+      if (typeof (window as any).__dismissPreloader === 'function') {
+        (window as any).__dismissPreloader();
+      }
+    }
+  }, [isLoading]);
+
   return (
     <FavoritesAndAlertsProvider catalogProperties={properties}>
       <MainContent

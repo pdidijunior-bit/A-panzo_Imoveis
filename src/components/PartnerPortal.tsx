@@ -446,15 +446,21 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
                     className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
                   >
                     <div>
-                      <div className="relative aspect-video bg-slate-100 overflow-hidden">
+                      <div className="relative aspect-video bg-slate-950 overflow-hidden flex items-center justify-center">
+                        <img
+                          src={p.images?.[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80'}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 scale-110 pointer-events-none"
+                        />
                         <img
                           src={p.images?.[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80'}
                           alt={p.title}
                           loading="lazy"
                           decoding="async"
-                          className="w-full h-full object-cover"
+                          className="relative z-1 max-w-full max-h-full w-auto h-auto object-contain mx-auto"
                         />
-                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                        <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5">
                           <span className="px-2 py-0.5 rounded-md bg-slate-900/90 text-white text-[10px] font-bold uppercase">
                             {p.dealType}
                           </span>
@@ -563,17 +569,23 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
                     className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
                   >
                     <div>
-                      <div className="relative aspect-video bg-slate-100 overflow-hidden">
+                      <div className="relative aspect-video bg-slate-950 overflow-hidden flex items-center justify-center">
+                        <img
+                          src={p.images?.[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80'}
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 scale-110 pointer-events-none"
+                        />
                         <img
                           src={p.images?.[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80'}
                           alt={p.title}
                           loading="lazy"
                           decoding="async"
-                          className="w-full h-full object-cover"
+                          className="relative z-1 max-w-full max-h-full w-auto h-auto object-contain mx-auto"
                         />
                         <button
                           onClick={() => toggleFavorite(p)}
-                          className="absolute top-2.5 right-2.5 p-2 rounded-full bg-white/90 text-rose-600 hover:bg-rose-50 shadow-xs transition-colors"
+                          className="absolute top-2.5 right-2.5 z-10 p-2 rounded-full bg-white/90 text-rose-600 hover:bg-rose-50 shadow-xs transition-colors"
                           title="Remover dos favoritos"
                         >
                           <Trash2 className="w-4 h-4" />

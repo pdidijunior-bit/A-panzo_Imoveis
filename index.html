@@ -47,6 +47,10 @@
       })();
     </script>
 
+    <!-- Favicon Oficial da Marca -->
+    <link rel="icon" type="image/jpeg" href="/panzo-logo.jpeg" />
+    <link rel="apple-touch-icon" href="/panzo-logo.jpeg" />
+
     <!-- Título oficial nas pesquisas do Google -->
     <title>A.PANZO - Imobiliária | Comércio &amp; Prestação de Serviços, LDA</title>
 
@@ -163,8 +167,247 @@
       ]
     }
     </script>
+    <style>
+      /* ========================================================
+         PRELOADER DE CARREGAMENTO PROFISSIONAL (A.PANZO)
+         ======================================================== */
+      .app-preloader {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 999999;
+        background: radial-gradient(circle at center, #ffffff 0%, #f8fafc 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s ease;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      .app-preloader.fade-out {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .preloader-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 24px;
+        max-width: 90vw;
+        animation: preloader-fade-in 0.35s ease-out forwards;
+      }
+
+      /* Logo do Preloader */
+      .preloader-logo-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+
+      .preloader-logo {
+        width: 90px;
+        height: 90px;
+        object-fit: cover;
+        border-radius: 22px;
+        box-shadow: 0 12px 28px -6px rgba(0, 82, 165, 0.28), 0 6px 12px -4px rgba(0, 0, 0, 0.08);
+        border: 2.5px solid #ffffff;
+        transition: transform 0.3s ease;
+        animation: preloader-logo-breath 2.2s ease-in-out infinite alternate;
+      }
+
+      .preloader-brand-fallback {
+        width: 84px;
+        height: 84px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #0052A5 0%, #003366 100%);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 30px;
+        letter-spacing: -0.05em;
+        box-shadow: 0 12px 28px -6px rgba(0, 82, 165, 0.35);
+      }
+
+      .preloader-brand-title {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 22px;
+      }
+
+      .preloader-company-name {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        font-size: 21px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        color: #003366;
+        text-transform: uppercase;
+      }
+
+      .preloader-company-sub {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        color: #C59B27;
+        text-transform: uppercase;
+        margin-top: 3px;
+      }
+
+      /* Loader Spinner & Bolinha Pulsante */
+      .preloader-loader-container {
+        position: relative;
+        width: 52px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+
+      .preloader-spinner-ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        border: 3px solid rgba(0, 82, 165, 0.12);
+        border-top-color: #0052A5;
+        border-right-color: #C59B27;
+        animation: preloader-spin 0.85s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+      }
+
+      .preloader-pulse-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0052A5 0%, #1E73CE 100%);
+        box-shadow: 0 0 14px rgba(0, 82, 165, 0.55);
+        animation: preloader-pulse 1.2s ease-in-out infinite alternate;
+      }
+
+      .preloader-loading-text {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        letter-spacing: 0.02em;
+        margin: 0;
+      }
+
+      @keyframes preloader-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      @keyframes preloader-pulse {
+        0% { transform: scale(0.72); opacity: 0.7; }
+        100% { transform: scale(1.18); opacity: 1; }
+      }
+
+      @keyframes preloader-logo-breath {
+        0% { transform: scale(1); }
+        100% { transform: scale(1.05); }
+      }
+
+      @keyframes preloader-fade-in {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
   </head>
   <body class="bg-white text-slate-900 antialiased selection:bg-[#0052A5] selection:text-white w-full max-w-full overflow-x-hidden relative">
+    <!-- ========================================================
+         PRELOADER DE CARREGAMENTO (ESTRUTURA VISUAL E BLOQUEIO)
+         ======================================================== -->
+    <div id="app-preloader" class="app-preloader" aria-label="A carregar aplicação">
+      <div class="preloader-content">
+        <!-- 
+          =============================================================
+          👉 COLOQUE AQUI A URL OU CAMINHO DO SEU LOGOTIPO:
+             Substitua o valor do atributo src="..." abaixo pelo caminho da sua imagem.
+             Exemplo: src="/logo.png" ou src="https://seusite.com/sua-logo.png"
+          =============================================================
+        -->
+        <div class="preloader-logo-wrapper">
+          <img
+            id="preloader-logo"
+            class="preloader-logo"
+            src="/panzo-logo.jpeg"
+            alt="A.PANZO - Comércio &amp; Prestação de Serviços, LDA (Imobiliária)"
+            onerror="this.style.display='none'; var fb=document.getElementById('preloader-brand-fallback'); if(fb) fb.style.display='flex';"
+          />
+          <!-- Monograma de reserva caso a logo demore a carregar ou falhe -->
+          <div id="preloader-brand-fallback" class="preloader-brand-fallback" style="display: none;">
+            <span>AP</span>
+          </div>
+        </div>
+
+        <div class="preloader-brand-title">
+          <span class="preloader-company-name">A.PANZO</span>
+          <span class="preloader-company-sub">Imobiliária &amp; Serviços</span>
+        </div>
+
+        <!-- Animação fluida de carregamento (Spinner + Bolinha Central) -->
+        <div class="preloader-loader-container">
+          <div class="preloader-spinner-ring"></div>
+          <div class="preloader-pulse-dot"></div>
+        </div>
+
+        <p class="preloader-loading-text">A preparar o seu portal...</p>
+      </div>
+    </div>
+
+    <script>
+      (function() {
+        var preloader = document.getElementById('app-preloader');
+        var startTime = Date.now();
+        var minDisplayTime = 650; // Tempo mínimo em ms para evitar piscadas
+        var maxSafetyTimeout = 3200; // Timeout de segurança em ms
+
+        function dismiss() {
+          if (!preloader || preloader.classList.contains('fade-out')) return;
+          var elapsed = Date.now() - startTime;
+          var remaining = Math.max(0, minDisplayTime - elapsed);
+
+          setTimeout(function() {
+            preloader.classList.add('fade-out');
+            setTimeout(function() {
+              if (preloader && preloader.parentNode) {
+                preloader.parentNode.removeChild(preloader);
+              }
+            }, 550);
+          }, remaining);
+        }
+
+        // Disponibiliza trigger global para React ou scripts externos
+        window.__dismissPreloader = dismiss;
+
+        // Dispara ao concluir carregamento completo da janela
+        if (document.readyState === 'complete') {
+          dismiss();
+        } else {
+          window.addEventListener('load', dismiss);
+          document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(dismiss, 1600);
+          });
+        }
+
+        // Timeout de segurança
+        setTimeout(dismiss, maxSafetyTimeout);
+      })();
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

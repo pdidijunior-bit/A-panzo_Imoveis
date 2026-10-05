@@ -277,7 +277,17 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
                       className="group flex flex-col sm:flex-row bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200 dark:border-slate-700/80 overflow-hidden hover:shadow-lg transition-all"
                     >
                       {/* Thumbnail */}
-                      <div className="relative w-full sm:w-44 h-40 sm:h-auto flex-shrink-0 bg-slate-100 dark:bg-slate-950 overflow-hidden">
+                      <div className="relative w-full sm:w-44 h-40 sm:h-auto flex-shrink-0 bg-slate-950 overflow-hidden flex items-center justify-center">
+                        <img
+                          src={
+                            prop.images && prop.images[0]
+                              ? prop.images[0]
+                              : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80'
+                          }
+                          alt=""
+                          aria-hidden="true"
+                          className="absolute inset-0 w-full h-full object-cover blur-md opacity-30 scale-110 pointer-events-none"
+                        />
                         <img
                           src={
                             prop.images && prop.images[0]
@@ -285,9 +295,9 @@ export const UserDashboardModal: React.FC<UserDashboardModalProps> = ({
                               : 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80'
                           }
                           alt={prop.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="relative z-1 max-w-full max-h-full w-auto h-auto object-contain group-hover:scale-105 transition-transform duration-300"
                         />
-                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-slate-900/80 text-amber-400 backdrop-blur-xs">
+                        <span className="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-slate-900/80 text-amber-400 backdrop-blur-xs">
                           {prop.dealType}
                         </span>
                       </div>
