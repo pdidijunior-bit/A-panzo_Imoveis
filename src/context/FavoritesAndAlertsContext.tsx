@@ -90,10 +90,10 @@ export const FavoritesAndAlertsProvider: React.FC<{
     }
   });
 
-  // Firestore-synced states (active when logged in)
-  const [firestoreFavorites, setFirestoreFavorites] = useState<{ id: string; propertyId: string }[]>([]);
-  const [firestoreAlerts, setFirestoreAlerts] = useState<PropertyAlert[]>([]);
-  const [firestoreNotifications, setFirestoreNotifications] = useState<AlertNotification[]>([]);
+  // Database-synced states (active when logged in)
+  const [dbFavorites, setDbFavorites] = useState<{ id: string; propertyId: string }[]>([]);
+  const [dbAlerts, setDbAlerts] = useState<PropertyAlert[]>([]);
+  const [dbNotifications, setDbNotifications] = useState<AlertNotification[]>([]);
 
   // UI state
   const [isUserDashboardOpen, setIsUserDashboardOpen] = useState<boolean>(false);
@@ -142,33 +142,33 @@ export const FavoritesAndAlertsProvider: React.FC<{
     }
   }, [localNotifications]);
 
-  // Subscribe to Firestore when authenticated
+  // Subscribe to Database when authenticated
   useEffect(() => {
     if (!currentUser) {
-      setFirestoreFavorites([]);
-      setFirestoreAlerts([]);
-      setFirestoreNotifications([]);
+      setDbFavorites([]);
+      setDbAlerts([]);
+      setDbNotifications([]);
       return;
     }
 
-    // Auto-sync guest favorites to Firestore on sign-in
+    // Auto-sync guest favorites to Database on sign-in
     if (localFavoriteIds.length > 0) {
       dbService.syncLocalFavoritesToUser(currentUser.uid, localFavoriteIds).catch(() => {});
     }
 
     // Listen to favorites
     const unsubFavs = dbService.subscribeFavorites(currentUser.uid, (favs) => {
-      setFirestoreFavorites(favs);
+      setDbFavorites(favs);
     });
 
     // Listen to alerts
     const unsubAlerts = dbService.subscribePropertyAlerts(currentUser.uid, (alrts) => {
-      setFirestoreAlerts(alrts);
+      setDbAlerts(alrts);
     });
 
     // Listen to notifications
     const unsubNotifs = dbService.subscribeAlertNotifications(currentUser.uid, (notifs) => {
-      setFirestoreNotifications(notifs);
+      setDbNotifications(notifs);
     });
 
     return () => {
@@ -181,26 +181,26 @@ export const FavoritesAndAlertsProvider: React.FC<{
   // Active combined values
   const activeFavoriteIds = useMemo(() => {
     if (currentUser) {
-      const fsIds = firestoreFavorites.map((f) => f.propertyId);
+      const fsIds = dbFavorites.map((f) => f.propertyId);
       // Merge unique
       return Array.from(new Set([...fsIds, ...localFavoriteIds]));
     }
     return localFavoriteIds;
-  }, [currentUser, firestoreFavorites, localFavoriteIds]);
+  }, [currentUser, dbFavorites, localFavoriteIds]);
 
   const activeAlerts = useMemo(() => {
     if (currentUser) {
-      return firestoreAlerts;
+      return dbAlerts;
     }
     return localAlerts;
-  }, [currentUser, firestoreAlerts, localAlerts]);
+  }, [currentUser, dbAlerts, localAlerts]);
 
   const activeNotifications = useMemo(() => {
     if (currentUser) {
-      return firestoreNotifications;
+      return dbNotifications;
     }
     return localNotifications;
-  }, [currentUser, firestoreNotifications, localNotifications]);
+  }, [currentUser, dbNotifications, localNotifications]);
 
   // Check properties against active alerts in real-time
   useEffect(() => {

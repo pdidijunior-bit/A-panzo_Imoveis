@@ -10,8 +10,7 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import { dbService } from '../lib/dbService';
 import { PartnerProfile } from '../types';
 import { sanitizeText, sanitizeEmail, sanitizePhone } from '../lib/sanitizer';
@@ -103,25 +102,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         try {
           const isPrimaryAdmin = user.email?.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase();
+          const isDbAdmin = await dbService.checkIsAdmin(user.email || '', user.uid);
 
-          // Check admin collection in Firestore
-          const adminDocRef = doc(db, 'admins', user.uid);
-          const adminDocSnap = await getDoc(adminDocRef);
-
-          if (isPrimaryAdmin || (adminDocSnap.exists() && adminDocSnap.data()?.role === 'admin')) {
+          if (isPrimaryAdmin || isDbAdmin) {
             setIsGoogleAdmin(true);
-            // Ensure document exists in admins collection if primary admin
-            if (isPrimaryAdmin && !adminDocSnap.exists()) {
-              await setDoc(
-                adminDocRef,
-                {
-                  email: user.email,
-                  role: 'admin',
-                  updatedAt: new Date().toISOString(),
-                },
-                { merge: true }
-              );
-            }
           } else {
             setIsGoogleAdmin(false);
           }
@@ -211,18 +195,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (res && res.user) {
-        // Record user profile in Firestore
-        await setDoc(
-          doc(db, 'users', res.user.uid),
-          {
-            uid: res.user.uid,
-            displayName: res.user.displayName || 'Utilizador',
-            email: res.user.email || '',
-            photoURL: res.user.photoURL || '',
-            role: 'client',
-            lastLoginAt: new Date().toISOString(),
-          },
-          { merge: true }
+        // Record user profile in Neon Postgres
+        await dbService.recordUserLogin(
+          res.user.uid,
+          res.user.email || '',
+          res.user.displayName || 'Utilizador',
+          res.user.photoURL || ''
         ).catch(() => {});
 
         await fetchPartnerData(res.user.uid);
@@ -272,17 +250,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       await updateProfile(user, { displayName: cleanName });
 
-      await setDoc(
-        doc(db, 'users', user.uid),
-        {
-          uid: user.uid,
-          displayName: cleanName,
-          email: cleanEmail,
-          role: 'client',
-          createdAt: new Date().toISOString(),
-          lastLoginAt: new Date().toISOString(),
-        },
-        { merge: true }
+      await dbService.recordUserLogin(
+        user.uid,
+        cleanEmail,
+        cleanName,
+        ''
       ).catch(() => {});
 
       setCurrentUser({ ...user, displayName: cleanName } as User);
@@ -321,14 +293,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const credential = await signInWithEmailAndPassword(auth, cleanEmail, pass);
       const user = credential.user;
 
-      await setDoc(
-        doc(db, 'users', user.uid),
-        {
-          uid: user.uid,
-          email: user.email,
-          lastLoginAt: new Date().toISOString(),
-        },
-        { merge: true }
+      await dbService.recordUserLogin(
+        user.uid,
+        user.email || cleanEmail,
+        user.displayName || 'Utilizador',
+        user.photoURL || ''
       ).catch(() => {});
 
       await fetchPartnerData(user.uid);

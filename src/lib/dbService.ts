@@ -1,16 +1,4 @@
-import {
-  collection,
-  doc,
-  setDoc,
-  deleteDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  where,
-  getDocs,
-  getDoc,
-} from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from './firebase';
+import { sql } from './neon';
 import {
   Property,
   Category,
@@ -21,464 +9,966 @@ import {
   Favorite,
   PropertyAlert,
   AlertNotification,
-  DealType,
   PartnerProfile,
+  DealType,
+  PropertyCondition,
+  PropertyStatus,
 } from '../types';
 import { DEFAULT_CATEGORIES, ANGOLA_LOCATIONS, DEFAULT_SITE_SETTINGS } from './defaultData';
-import { normalizeCurrency } from './formatters';
 import { batchUploadPropertyPhotos, UploadProgressInfo } from './mediaUtils';
 
-/**
- * Recursively strips any keys whose value is undefined, which Firestore setDoc/updateDoc strictly rejects.
- */
-export function cleanFirestoreData<T extends Record<string, any>>(data: T): Record<string, any> {
-  const clean: Record<string, any> = {};
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined) {
-      if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
-        clean[key] = cleanFirestoreData(value);
-      } else {
-        clean[key] = value;
-      }
+// Event emitter helper for instant UI reactivity across components
+type Listener<T> = (data: T) => void;
+const propertyListeners = new Set<Listener<Property[]>>();
+let cachedProperties: Property[] = [];
+
+function notifyPropertyListeners(props: Property[]) {
+  cachedProperties = props;
+  propertyListeners.forEach((fn) => {
+    try {
+      fn(props);
+    } catch (e) {
+      console.warn('Property listener error:', e);
     }
-  }
-  return clean;
+  });
 }
 
-function normalizeSiteSettings(data: any): SiteSettings {
-  const merged: SiteSettings = { ...DEFAULT_SITE_SETTINGS, ...data };
-  let migrated = false;
-  // If settings still contain old legacy contact info or default titles
-  if (!merged.phone || merged.phone.includes('935973494') || merged.phone.includes('924875869') || merged.phone.includes('924 875 869')) {
-    merged.phone = '+244 925 883 080';
-    migrated = true;
+function parseJsonField<T>(val: any, fallback: T): T {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === 'object') return val as T;
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val) as T;
+    } catch {
+      return fallback;
+    }
   }
-  if (!merged.whatsapp || merged.whatsapp.includes('935973494') || merged.whatsapp.includes('924875869') || merged.whatsapp.includes('924 875 869')) {
-    merged.whatsapp = '+244 925 883 080';
-    migrated = true;
-  }
-  if (!merged.phone2) {
-    merged.phone2 = '+244 928 771 808';
-    migrated = true;
-  }
-  if (merged.phone3 && merged.phone3.includes('952')) {
-    merged.phone3 = '';
-    migrated = true;
-  }
-  if (!merged.email || merged.email.includes('aliancaimobiliaria.ao')) {
-    merged.email = 'comercial@anpanzo.com';
-    migrated = true;
-  }
-  if (!merged.email2) {
-    merged.email2 = 'ap.imobiliaria1985@gmail.com';
-    migrated = true;
-  }
-  if (!merged.website) {
-    merged.website = 'anpanzo.com';
-    migrated = true;
-  }
-  if (!merged.instagram) {
-    merged.instagram = '@A.panzo comercial';
-    migrated = true;
-  }
-  if (!merged.facebook) {
-    merged.facebook = 'A.panzo comercial';
-    migrated = true;
-  }
-  if (!merged.address || merged.address.includes('Luanda & Malanje, Angola')) {
-    merged.address = 'Angola – Serviço com Qualidade e Confiança';
-    migrated = true;
-  }
-  if (!merged.heroTitle || merged.heroTitle.includes('Aliança Imobiliária')) {
-    merged.heroTitle = 'Quer Vender, Comprar ou Arrendar? Nós Temos a Solução Ideal para Si!';
-    migrated = true;
-  }
-  if (!merged.heroSubtitle || merged.heroSubtitle.includes('Aliança Imobiliária')) {
-    merged.heroSubtitle = 'A.PANZO - Comércio & Prestação de Serviços, LDA. Cuidamos do seu imóvel como se fosse nosso com qualidade e confiança.';
-    migrated = true;
-  }
-  if (!merged.marqueeNotice || merged.marqueeNotice.includes('Aliança') || merged.marqueeNotice.includes('924 875 869') || merged.marqueeNotice.includes('935973494')) {
-    merged.marqueeNotice = 'A.PANZO Imobiliária • Apartamentos, Vivendas, Lojas, Armazéns, Escritórios e Terrenos • WhatsApp: +244 925 883 080';
-    migrated = true;
-  }
-  if (migrated) {
-    setDoc(
-      doc(db, 'site_settings', 'general'),
-      cleanFirestoreData({
-        ...merged,
-        updatedAt: new Date().toISOString(),
-      }),
-      { merge: true }
-    ).catch(() => {});
-  }
-  return merged;
+  return fallback;
+}
+
+function mapRowToProperty(row: any): Property {
+  return {
+    id: String(row.id),
+    code: String(row.code || ''),
+    title: String(row.title || ''),
+    dealType: (row.deal_type || 'venda') as DealType,
+    category: String(row.category || ''),
+    categoryName: String(row.category_name || ''),
+    price: Number(row.price || 0),
+    currency: (row.currency || 'AOA') as 'AOA' | 'USD' | 'EUR',
+    isNegotiable: Boolean(row.is_negotiable),
+    province: String(row.province || ''),
+    municipality: String(row.municipality || ''),
+    neighborhood: String(row.neighborhood || ''),
+    addressReference: row.address_reference ? String(row.address_reference) : undefined,
+    area: Number(row.area || 0),
+    bedrooms: Number(row.bedrooms || 0),
+    bathrooms: Number(row.bathrooms || 0),
+    parkingSpaces: Number(row.parking_spaces || 0),
+    condition: (row.condition || 'usado') as PropertyCondition,
+    status: (row.status || 'disponivel') as PropertyStatus,
+    isFeatured: Boolean(row.is_featured),
+    features: parseJsonField<string[]>(row.features, []),
+    description: String(row.description || ''),
+    images: parseJsonField<string[]>(row.images, []),
+    videoUrl: row.video_url ? String(row.video_url) : null,
+    hasVideo: Boolean(row.has_video),
+    viewsCount: Number(row.views_count || 0),
+    publishedBy: row.published_by ? String(row.published_by) : undefined,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+  };
+}
+
+function mapRowToPartner(row: any): PartnerProfile {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    companyName: String(row.company_name || ''),
+    nif: String(row.nif || ''),
+    technicalResponsible: String(row.technical_responsible || ''),
+    email: String(row.email || ''),
+    phone: String(row.phone || ''),
+    address: String(row.address || ''),
+    province: row.province ? String(row.province) : undefined,
+    municipality: row.municipality ? String(row.municipality) : undefined,
+    validationDocuments: String(row.validation_documents || ''),
+    status: (row.status || 'pending') as 'active' | 'pending' | 'suspended',
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+  };
+}
+
+function mapRowToSiteSettings(row: any): SiteSettings {
+  if (!row) return DEFAULT_SITE_SETTINGS;
+  return {
+    id: String(row.id || 'default'),
+    heroTitle: String(row.hero_title || DEFAULT_SITE_SETTINGS.heroTitle),
+    heroSubtitle: String(row.hero_subtitle || DEFAULT_SITE_SETTINGS.heroSubtitle),
+    heroBannerImage: row.hero_banner_image ? String(row.hero_banner_image) : undefined,
+    marqueeNotice: String(row.marquee_notice || DEFAULT_SITE_SETTINGS.marqueeNotice),
+    showMarquee: row.show_marquee !== undefined ? Boolean(row.show_marquee) : DEFAULT_SITE_SETTINGS.showMarquee,
+    aboutStory: String(row.about_story || DEFAULT_SITE_SETTINGS.aboutStory),
+    aboutMission: String(row.about_mission || DEFAULT_SITE_SETTINGS.aboutMission),
+    aboutVision: String(row.about_vision || DEFAULT_SITE_SETTINGS.aboutVision),
+    aboutValues: parseJsonField<string[]>(row.about_values, DEFAULT_SITE_SETTINGS.aboutValues),
+    servicesList: parseJsonField<any[]>(row.services_list, DEFAULT_SITE_SETTINGS.servicesList),
+    phone: String(row.phone || DEFAULT_SITE_SETTINGS.phone),
+    phone2: row.phone2 ? String(row.phone2) : undefined,
+    phone3: row.phone3 ? String(row.phone3) : undefined,
+    whatsapp: String(row.whatsapp || DEFAULT_SITE_SETTINGS.whatsapp),
+    email: String(row.email || DEFAULT_SITE_SETTINGS.email),
+    email2: row.email2 ? String(row.email2) : undefined,
+    website: row.website ? String(row.website) : undefined,
+    instagram: row.instagram ? String(row.instagram) : undefined,
+    facebook: row.facebook ? String(row.facebook) : undefined,
+    address: String(row.address || DEFAULT_SITE_SETTINGS.address),
+    workingHours: String(row.working_hours || DEFAULT_SITE_SETTINGS.workingHours),
+    logoUrl: row.logo_url ? String(row.logo_url) : '/panzo-logo.jpeg',
+    profilePhotoUrl: row.profile_photo_url ? String(row.profile_photo_url) : undefined,
+    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+  };
 }
 
 export const dbService = {
-  // --- PROPERTIES ---
-  subscribeProperties(
-    callback: (properties: Property[]) => void,
-    onError?: (err: any) => void
-  ) {
-    const path = 'properties';
-    const q = query(collection(db, path), orderBy('createdAt', 'desc'));
-
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        const items = snapshot.docs.map((d) => {
-          const data = d.data();
-          const currency = normalizeCurrency(data.currency);
-          const rawDeal = data.dealType;
-          const dealType: DealType =
-            rawDeal === 'venda' || rawDeal === 'arrendamento' || rawDeal === 'trespasse'
-              ? rawDeal
-              : 'venda';
-
-          const sanitized: Property = {
-            id: d.id,
-            title: data.title || 'Imóvel sem título',
-            code: data.code || `ALI-${String(d.id).slice(-4).toUpperCase()}`,
-            dealType,
-            category: data.category || 'apartamento',
-            categoryName: data.categoryName || 'Apartamento',
-            price: typeof data.price === 'number' && !isNaN(data.price) ? data.price : 0,
-            currency: currency as any,
-            isNegotiable: Boolean(data.isNegotiable),
-            province: data.province || 'Luanda',
-            municipality: data.municipality || 'Luanda',
-            neighborhood: data.neighborhood || '',
-            addressReference: data.addressReference || '',
-            area: typeof data.area === 'number' ? data.area : 0,
-            bedrooms: typeof data.bedrooms === 'number' ? data.bedrooms : 0,
-            bathrooms: typeof data.bathrooms === 'number' ? data.bathrooms : 0,
-            parkingSpaces: typeof data.parkingSpaces === 'number' ? data.parkingSpaces : 0,
-            features: Array.isArray(data.features) ? data.features : [],
-            description: data.description || '',
-            condition: data.condition || 'usado',
-            status: data.status || 'disponivel',
-            isFeatured: Boolean(data.isFeatured || data.featured),
-            images: Array.isArray(data.images) && data.images.length > 0 ? data.images : [],
-            videoUrl: data.videoUrl || null,
-            viewsCount: typeof data.viewsCount === 'number' ? data.viewsCount : 0,
-            createdAt: data.createdAt ? String(data.createdAt) : new Date().toISOString(),
-            updatedAt: data.updatedAt ? String(data.updatedAt) : new Date().toISOString(),
-            publishedBy: data.publishedBy || '',
-          };
-          return sanitized;
-        }) as Property[];
-        callback(items);
-      },
-      (error) => {
-        console.warn('Erro ao escutar imóveis do Firestore:', error.message);
-        if (onError) onError(error);
-      }
-    );
-  },
-
-  async saveProperty(property: Property): Promise<void> {
-    const path = `properties/${property.id}`;
+  /**
+   * Verifica se o usuário é administrador (via Neon Postgres)
+   */
+  async checkIsAdmin(email: string, userId?: string): Promise<boolean> {
     try {
-      const currency = normalizeCurrency(property.currency);
-      const sanitized = cleanFirestoreData({
-        ...property,
-        currency,
-        videoUrl: property.videoUrl || null,
-        updatedAt: new Date().toISOString(),
-      });
-      await setDoc(doc(db, 'properties', property.id), sanitized, { merge: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, path);
+      if (!email) return false;
+      if (email.toLowerCase() === 'anoterlove132@gmail.com') return true;
+      const rows = await sql`SELECT role FROM admins WHERE LOWER(email) = LOWER(${email}) LIMIT 1`;
+      return rows.length > 0 && rows[0].role === 'admin';
+    } catch {
+      return email.toLowerCase() === 'anoterlove132@gmail.com';
     }
   },
 
   /**
-   * Utilitário assíncrono para upload em massa de imagens para o Firestore.
-   * Otimizado para processar 15+ a 30+ fotografias por imóvel sem exceder os limites
-   * do Firestore e sem travar o navegador, executando a compressão em lotes paralelos controlados.
+   * Categorias de Imóveis
    */
-  async uploadBatchPropertyImages(
-    files: FileList | File[],
-    onProgress?: (progress: UploadProgressInfo) => void
-  ): Promise<string[]> {
-    return batchUploadPropertyPhotos(files, onProgress);
-  },
-
-  /**
-   * Grava um imóvel completo no Firestore integrando o upload em lote de 15+ imagens.
-   * Processa todas as imagens de forma assíncrona, concatena com as já existentes e salva o documento.
-   */
-  async savePropertyWithBatchImages(
-    propertyData: Property,
-    newFiles?: FileList | File[],
-    onProgress?: (progress: UploadProgressInfo) => void
-  ): Promise<Property> {
-    let finalImages = Array.isArray(propertyData.images) ? [...propertyData.images] : [];
-
-    if (newFiles && newFiles.length > 0) {
-      const uploadedDataUrls = await this.uploadBatchPropertyImages(newFiles, onProgress);
-      finalImages = [...finalImages, ...uploadedDataUrls];
-    }
-
-    const payload: Property = {
-      ...propertyData,
-      images: finalImages,
-      updatedAt: new Date().toISOString(),
-    };
-
-    await this.saveProperty(payload);
-    return payload;
-  },
-
-  /**
-   * Anexa um novo lote de imagens (15+ fotos) diretamente a um imóvel existente no Firestore.
-   */
-  async appendPropertyImages(
-    propertyId: string,
-    newFiles: FileList | File[],
-    onProgress?: (progress: UploadProgressInfo) => void
-  ): Promise<string[]> {
-    const propertyDocRef = doc(db, 'properties', propertyId);
-    const snap = await getDoc(propertyDocRef);
-    if (!snap.exists()) {
-      throw new Error(`Imóvel com id "${propertyId}" não foi encontrado no Firestore.`);
-    }
-
-    const currentImages: string[] = snap.data().images || [];
-    const newUploaded = await this.uploadBatchPropertyImages(newFiles, onProgress);
-    const combinedImages = [...currentImages, ...newUploaded];
-
-    await setDoc(
-      propertyDocRef,
-      {
-        images: combinedImages,
-        updatedAt: new Date().toISOString(),
-      },
-      { merge: true }
-    );
-
-    return combinedImages;
-  },
-
-  async deleteProperty(propertyId: string): Promise<void> {
-    const path = `properties/${propertyId}`;
-    try {
-      await deleteDoc(doc(db, 'properties', propertyId));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, path);
-    }
-  },
-
-  // --- CATEGORIES ---
   async getCategories(): Promise<Category[]> {
     try {
-      const q = query(collection(db, 'categories'), orderBy('order', 'asc'));
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) return DEFAULT_CATEGORIES;
-      return snapshot.docs.map((d) => ({ ...d.data(), id: d.id })) as Category[];
-    } catch {
+      const rows = await sql`
+        SELECT id, name, slug, type, icon, order_index, is_active
+        FROM categories
+        WHERE is_active = TRUE
+        ORDER BY order_index ASC
+      `;
+      if (!rows || rows.length === 0) {
+        return DEFAULT_CATEGORIES;
+      }
+      return rows.map((r) => ({
+        id: String(r.id),
+        name: String(r.name),
+        slug: String(r.slug),
+        type: r.type as any,
+        icon: r.icon ? String(r.icon) : undefined,
+        order: Number(r.order_index || 0),
+        isActive: Boolean(r.is_active),
+      }));
+    } catch (err) {
+      console.warn('Erro ao carregar categorias do Neon:', err);
       return DEFAULT_CATEGORIES;
     }
   },
 
-  subscribeCategories(
-    callback: (categories: Category[]) => void,
-    onError?: (err: any) => void
-  ) {
-    const path = 'categories';
-    const q = query(collection(db, path), orderBy('order', 'asc'));
-
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        if (snapshot.empty) {
-          callback(DEFAULT_CATEGORIES);
-        } else {
-          const items = snapshot.docs.map((d) => ({
-            ...d.data(),
-            id: d.id,
-          })) as Category[];
-          callback(items);
-        }
-      },
-      (error) => {
-        console.warn('Erro ao escutar categorias do Firestore:', error.message);
-        callback(DEFAULT_CATEGORIES);
-        if (onError) onError(error);
-      }
-    );
-  },
-
-  async saveCategory(category: Category): Promise<void> {
-    const path = `categories/${category.id}`;
-    try {
-      await setDoc(doc(db, 'categories', category.id), cleanFirestoreData(category), { merge: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, path);
-    }
-  },
-
-  async deleteCategory(categoryId: string): Promise<void> {
-    const path = `categories/${categoryId}`;
-    try {
-      await deleteDoc(doc(db, 'categories', categoryId));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, path);
-    }
-  },
-
-  // --- LOCATIONS ---
+  /**
+   * Localizações (Províncias e Municípios)
+   */
   async getLocations(): Promise<LocationConfig[]> {
     try {
-      const q = query(collection(db, 'locations'), orderBy('order', 'asc'));
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) return ANGOLA_LOCATIONS;
-      return snapshot.docs.map((d) => ({ ...d.data(), id: d.id })) as LocationConfig[];
-    } catch {
+      const rows = await sql`
+        SELECT id, province, municipalities, order_index
+        FROM locations
+        ORDER BY order_index ASC
+      `;
+      if (!rows || rows.length === 0) {
+        return ANGOLA_LOCATIONS;
+      }
+      return rows.map((r) => ({
+        id: String(r.id),
+        province: String(r.province),
+        municipalities: parseJsonField<string[]>(r.municipalities, []),
+        order: Number(r.order_index || 0),
+      }));
+    } catch (err) {
+      console.warn('Erro ao carregar localizações do Neon:', err);
       return ANGOLA_LOCATIONS;
     }
   },
 
-  subscribeLocations(
-    callback: (locations: LocationConfig[]) => void,
-    onError?: (err: any) => void
-  ) {
-    const path = 'locations';
-    const q = query(collection(db, path), orderBy('order', 'asc'));
-
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        if (snapshot.empty) {
-          callback(ANGOLA_LOCATIONS);
-        } else {
-          const items = snapshot.docs.map((d) => ({
-            ...d.data(),
-            id: d.id,
-          })) as LocationConfig[];
-          callback(items);
-        }
-      },
-      (error) => {
-        console.warn('Erro ao escutar localizações:', error.message);
-        callback(ANGOLA_LOCATIONS);
-        if (onError) onError(error);
-      }
-    );
-  },
-
-  async saveLocation(location: LocationConfig): Promise<void> {
-    const path = `locations/${location.id}`;
-    try {
-      await setDoc(doc(db, 'locations', location.id), cleanFirestoreData(location), { merge: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, path);
-    }
-  },
-
-  async deleteLocation(locationId: string): Promise<void> {
-    const path = `locations/${locationId}`;
-    try {
-      await deleteDoc(doc(db, 'locations', locationId));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, path);
-    }
-  },
-
-  // --- SITE SETTINGS ---
+  /**
+   * Configurações Gerais do Site
+   */
   async getSiteSettings(): Promise<SiteSettings> {
     try {
-      const snap = await getDoc(doc(db, 'site_settings', 'general'));
-      if (snap.exists()) {
-        return normalizeSiteSettings(snap.data());
+      const rows = await sql`
+        SELECT * FROM site_settings WHERE id = 'default' LIMIT 1
+      `;
+      if (rows && rows.length > 0) {
+        return mapRowToSiteSettings(rows[0]);
       }
       return DEFAULT_SITE_SETTINGS;
-    } catch {
+    } catch (err) {
+      console.warn('Erro ao carregar configurações do Neon:', err);
       return DEFAULT_SITE_SETTINGS;
     }
-  },
-
-  subscribeSiteSettings(
-    callback: (settings: SiteSettings) => void,
-    onError?: (err: any) => void
-  ) {
-    const path = 'site_settings/general';
-    return onSnapshot(
-      doc(db, 'site_settings', 'general'),
-      (snapshot) => {
-        if (snapshot.exists()) {
-          callback(normalizeSiteSettings(snapshot.data()));
-        } else {
-          callback(DEFAULT_SITE_SETTINGS);
-        }
-      },
-      (error) => {
-        console.warn('Erro ao carregar configurações:', error.message);
-        callback(DEFAULT_SITE_SETTINGS);
-        if (onError) onError(error);
-      }
-    );
   },
 
   async updateSiteSettings(settings: Partial<SiteSettings>): Promise<void> {
-    const path = 'site_settings/general';
     try {
-      const sanitized = cleanFirestoreData({
-        ...settings,
-        updatedAt: new Date().toISOString(),
-      });
-      await setDoc(doc(db, 'site_settings', 'general'), sanitized, { merge: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, path);
+      const current = await this.getSiteSettings();
+      const merged: SiteSettings = { ...current, ...settings, updatedAt: new Date().toISOString() };
+
+      await sql`
+        INSERT INTO site_settings (
+          id, hero_title, hero_subtitle, hero_banner_image, marquee_notice, show_marquee,
+          about_story, about_mission, about_vision, about_values, services_list,
+          phone, phone2, phone3, whatsapp, email, email2, website, instagram, facebook,
+          address, working_hours, logo_url, profile_photo_url, updated_at
+        ) VALUES (
+          'default',
+          ${merged.heroTitle},
+          ${merged.heroSubtitle},
+          ${merged.heroBannerImage || null},
+          ${merged.marqueeNotice},
+          ${merged.showMarquee},
+          ${merged.aboutStory},
+          ${merged.aboutMission},
+          ${merged.aboutVision},
+          ${JSON.stringify(merged.aboutValues)},
+          ${JSON.stringify(merged.servicesList)},
+          ${merged.phone},
+          ${merged.phone2 || null},
+          ${merged.phone3 || null},
+          ${merged.whatsapp},
+          ${merged.email},
+          ${merged.email2 || null},
+          ${merged.website || null},
+          ${merged.instagram || null},
+          ${merged.facebook || null},
+          ${merged.address},
+          ${merged.workingHours},
+          ${merged.logoUrl || '/panzo-logo.jpeg'},
+          ${merged.profilePhotoUrl || null},
+          NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          hero_title = EXCLUDED.hero_title,
+          hero_subtitle = EXCLUDED.hero_subtitle,
+          hero_banner_image = EXCLUDED.hero_banner_image,
+          marquee_notice = EXCLUDED.marquee_notice,
+          show_marquee = EXCLUDED.show_marquee,
+          about_story = EXCLUDED.about_story,
+          about_mission = EXCLUDED.about_mission,
+          about_vision = EXCLUDED.about_vision,
+          about_values = EXCLUDED.about_values,
+          services_list = EXCLUDED.services_list,
+          phone = EXCLUDED.phone,
+          phone2 = EXCLUDED.phone2,
+          phone3 = EXCLUDED.phone3,
+          whatsapp = EXCLUDED.whatsapp,
+          email = EXCLUDED.email,
+          email2 = EXCLUDED.email2,
+          website = EXCLUDED.website,
+          instagram = EXCLUDED.instagram,
+          facebook = EXCLUDED.facebook,
+          address = EXCLUDED.address,
+          working_hours = EXCLUDED.working_hours,
+          logo_url = EXCLUDED.logo_url,
+          profile_photo_url = EXCLUDED.profile_photo_url,
+          updated_at = NOW()
+      `;
+    } catch (err) {
+      console.error('Erro ao atualizar configurações no Neon:', err);
+      throw err;
     }
   },
 
-  // --- REAL-TIME MESSAGING ---
-  subscribeConversations(
-    callback: (conversations: Conversation[]) => void,
-    onError?: (err: any) => void
-  ) {
-    const path = 'conversations';
-    const q = query(collection(db, path), orderBy('lastMessageAt', 'desc'));
+  /**
+   * Catálogo de Imóveis (Consulta e Atualização em Tempo Real)
+   */
+  async getProperties(): Promise<Property[]> {
+    try {
+      const rows = await sql`
+        SELECT * FROM properties ORDER BY created_at DESC
+      `;
+      const mapped = rows.map(mapRowToProperty);
+      notifyPropertyListeners(mapped);
+      return mapped;
+    } catch (err) {
+      console.error('Erro ao buscar imóveis no Neon:', err);
+      return cachedProperties;
+    }
+  },
 
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        const items = snapshot.docs.map((d) => ({
-          ...d.data(),
-          id: d.id,
-        })) as Conversation[];
-        callback(items);
-      },
-      (error) => {
-        console.warn('Erro ao escutar conversas:', error.message);
-        if (onError) onError(error);
+  subscribeProperties(
+    onUpdate: (properties: Property[]) => void,
+    onError?: (error: Error) => void
+  ): () => void {
+    propertyListeners.add(onUpdate);
+
+    // Initial fetch
+    this.getProperties()
+      .then((items) => onUpdate(items))
+      .catch((err) => {
+        if (onError) onError(err);
+      });
+
+    // Periodic background sync (every 12 seconds)
+    const interval = setInterval(() => {
+      this.getProperties()
+        .then((items) => onUpdate(items))
+        .catch(() => {});
+    }, 12000);
+
+    return () => {
+      propertyListeners.delete(onUpdate);
+      clearInterval(interval);
+    };
+  },
+
+  async getPropertyById(id: string): Promise<Property | null> {
+    try {
+      const rows = await sql`SELECT * FROM properties WHERE id = ${id} LIMIT 1`;
+      if (rows && rows.length > 0) {
+        return mapRowToProperty(rows[0]);
       }
-    );
+      return null;
+    } catch (err) {
+      console.error(`Erro ao buscar imóvel ${id} no Neon:`, err);
+      return null;
+    }
+  },
+
+  async addProperty(propertyData: Omit<Property, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    try {
+      const id = `prop-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const code = propertyData.code || `AP-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      await sql`
+        INSERT INTO properties (
+          id, code, title, deal_type, category, category_name, price, currency,
+          is_negotiable, province, municipality, neighborhood, address_reference,
+          area, bedrooms, bathrooms, parking_spaces, condition, status, is_featured,
+          features, description, images, video_url, has_video, views_count, published_by,
+          created_at, updated_at
+        ) VALUES (
+          ${id},
+          ${code},
+          ${propertyData.title},
+          ${propertyData.dealType},
+          ${propertyData.category},
+          ${propertyData.categoryName},
+          ${Number(propertyData.price || 0)},
+          ${propertyData.currency || 'AOA'},
+          ${Boolean(propertyData.isNegotiable)},
+          ${propertyData.province},
+          ${propertyData.municipality},
+          ${propertyData.neighborhood},
+          ${propertyData.addressReference || null},
+          ${Number(propertyData.area || 0)},
+          ${Number(propertyData.bedrooms || 0)},
+          ${Number(propertyData.bathrooms || 0)},
+          ${Number(propertyData.parkingSpaces || 0)},
+          ${propertyData.condition || 'usado'},
+          ${propertyData.status || 'disponivel'},
+          ${Boolean(propertyData.isFeatured)},
+          ${JSON.stringify(propertyData.features || [])},
+          ${propertyData.description || ''},
+          ${JSON.stringify(propertyData.images || [])},
+          ${propertyData.videoUrl || null},
+          ${Boolean(propertyData.hasVideo)},
+          ${Number(propertyData.viewsCount || 0)},
+          ${propertyData.publishedBy || 'A.PANZO Imobiliária'},
+          NOW(),
+          NOW()
+        )
+      `;
+
+      await this.getProperties();
+      return id;
+    } catch (err) {
+      console.error('Erro ao adicionar imóvel no Neon:', err);
+      throw err;
+    }
+  },
+
+  async updateProperty(id: string, propertyData: Partial<Property>): Promise<void> {
+    try {
+      const existing = await this.getPropertyById(id);
+      if (!existing) throw new Error(`Imóvel ${id} não encontrado.`);
+
+      const merged: Property = {
+        ...existing,
+        ...propertyData,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await sql`
+        UPDATE properties SET
+          title = ${merged.title},
+          code = ${merged.code},
+          deal_type = ${merged.dealType},
+          category = ${merged.category},
+          category_name = ${merged.categoryName},
+          price = ${Number(merged.price || 0)},
+          currency = ${merged.currency},
+          is_negotiable = ${Boolean(merged.isNegotiable)},
+          province = ${merged.province},
+          municipality = ${merged.municipality},
+          neighborhood = ${merged.neighborhood},
+          address_reference = ${merged.addressReference || null},
+          area = ${Number(merged.area || 0)},
+          bedrooms = ${Number(merged.bedrooms || 0)},
+          bathrooms = ${Number(merged.bathrooms || 0)},
+          parking_spaces = ${Number(merged.parkingSpaces || 0)},
+          condition = ${merged.condition},
+          status = ${merged.status},
+          is_featured = ${Boolean(merged.isFeatured)},
+          features = ${JSON.stringify(merged.features || [])},
+          description = ${merged.description},
+          images = ${JSON.stringify(merged.images || [])},
+          video_url = ${merged.videoUrl || null},
+          has_video = ${Boolean(merged.hasVideo)},
+          updated_at = NOW()
+        WHERE id = ${id}
+      `;
+
+      await this.getProperties();
+    } catch (err) {
+      console.error(`Erro ao atualizar imóvel ${id} no Neon:`, err);
+      throw err;
+    }
+  },
+
+  async deleteProperty(id: string): Promise<void> {
+    try {
+      await sql`DELETE FROM properties WHERE id = ${id}`;
+      await this.getProperties();
+    } catch (err) {
+      console.error(`Erro ao eliminar imóvel ${id} no Neon:`, err);
+      throw err;
+    }
+  },
+
+  async incrementPropertyViews(id: string): Promise<void> {
+    try {
+      await sql`UPDATE properties SET views_count = views_count + 1 WHERE id = ${id}`;
+    } catch (err) {
+      console.warn(`Erro ao incrementar visualizações no imóvel ${id}:`, err);
+    }
+  },
+
+  /**
+   * Portal do Parceiro / Corretores
+   */
+  async getPartnerProfile(userId: string): Promise<PartnerProfile | null> {
+    try {
+      const rows = await sql`
+        SELECT * FROM partners WHERE user_id = ${userId} LIMIT 1
+      `;
+      if (rows && rows.length > 0) {
+        return mapRowToPartner(rows[0]);
+      }
+      return null;
+    } catch (err) {
+      console.warn('Erro ao obter perfil de parceiro do Neon:', err);
+      return null;
+    }
+  },
+
+  async savePartnerProfile(profile: PartnerProfile): Promise<void> {
+    try {
+      await sql`
+        INSERT INTO partners (
+          id, user_id, company_name, nif, technical_responsible, email,
+          phone, address, province, municipality, validation_documents, status,
+          created_at, updated_at
+        ) VALUES (
+          ${profile.id},
+          ${profile.userId},
+          ${profile.companyName},
+          ${profile.nif},
+          ${profile.technicalResponsible},
+          ${profile.email},
+          ${profile.phone},
+          ${profile.address},
+          ${profile.province || null},
+          ${profile.municipality || null},
+          ${profile.validationDocuments || null},
+          ${profile.status || 'pending'},
+          NOW(),
+          NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          company_name = EXCLUDED.company_name,
+          nif = EXCLUDED.nif,
+          technical_responsible = EXCLUDED.technical_responsible,
+          email = EXCLUDED.email,
+          phone = EXCLUDED.phone,
+          address = EXCLUDED.address,
+          province = EXCLUDED.province,
+          municipality = EXCLUDED.municipality,
+          validation_documents = EXCLUDED.validation_documents,
+          status = EXCLUDED.status,
+          updated_at = NOW()
+      `;
+    } catch (err) {
+      console.error('Erro ao salvar parceiro no Neon:', err);
+      throw err;
+    }
+  },
+
+  async getPartnerProfiles(): Promise<PartnerProfile[]> {
+    try {
+      const rows = await sql`SELECT * FROM partners ORDER BY created_at DESC`;
+      return rows.map(mapRowToPartner);
+    } catch (err) {
+      console.error('Erro ao listar parceiros do Neon:', err);
+      return [];
+    }
+  },
+
+  async updatePartnerStatus(id: string, status: 'active' | 'pending' | 'suspended'): Promise<void> {
+    try {
+      await sql`UPDATE partners SET status = ${status}, updated_at = NOW() WHERE id = ${id}`;
+    } catch (err) {
+      console.error(`Erro ao atualizar status do parceiro ${id}:`, err);
+      throw err;
+    }
+  },
+
+  /**
+   * Favoritos dos Clientes
+   */
+  async getUserFavorites(userId: string): Promise<Favorite[]> {
+    try {
+      const rows = await sql`
+        SELECT id, user_id, property_id, created_at
+        FROM favorites
+        WHERE user_id = ${userId}
+        ORDER BY created_at DESC
+      `;
+      return rows.map((r) => ({
+        id: String(r.id),
+        userId: String(r.user_id),
+        propertyId: String(r.property_id),
+        createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+      }));
+    } catch (err) {
+      console.warn('Erro ao carregar favoritos do Neon:', err);
+      return [];
+    }
+  },
+
+  async addFavorite(userId: string, propertyId: string): Promise<void> {
+    try {
+      const id = `${userId}_${propertyId}`;
+      await sql`
+        INSERT INTO favorites (id, user_id, property_id, created_at)
+        VALUES (${id}, ${userId}, ${propertyId}, NOW())
+        ON CONFLICT (id) DO NOTHING
+      `;
+    } catch (err) {
+      console.error('Erro ao adicionar favorito no Neon:', err);
+      throw err;
+    }
+  },
+
+  async removeFavorite(userId: string, propertyId: string): Promise<void> {
+    try {
+      await sql`
+        DELETE FROM favorites WHERE user_id = ${userId} AND property_id = ${propertyId}
+      `;
+    } catch (err) {
+      console.error('Erro ao remover favorito no Neon:', err);
+      throw err;
+    }
+  },
+
+  async syncLocalFavoritesToUser(userId: string, propertyIds: string[]): Promise<void> {
+    for (const propId of propertyIds) {
+      try {
+        await this.addFavorite(userId, propId);
+      } catch {}
+    }
+  },
+
+  subscribeFavorites(userId: string, onUpdate: (favs: { id: string; propertyId: string }[]) => void): () => void {
+    const fetchFavs = async () => {
+      const list = await this.getUserFavorites(userId);
+      onUpdate(list.map((f) => ({ id: f.id, propertyId: f.propertyId })));
+    };
+    fetchFavs();
+    const timer = setInterval(fetchFavs, 8000);
+    return () => clearInterval(timer);
+  },
+
+  /**
+   * Alertas de Imóveis (Radar Imobiliário)
+   */
+  async getUserAlerts(userId: string): Promise<PropertyAlert[]> {
+    try {
+      const rows = await sql`
+        SELECT * FROM property_alerts WHERE user_id = ${userId} ORDER BY created_at DESC
+      `;
+      return rows.map((r) => ({
+        id: String(r.id),
+        userId: String(r.user_id),
+        name: String(r.name),
+        dealType: (r.deal_type || 'todos') as any,
+        category: String(r.category || ''),
+        province: String(r.province || ''),
+        municipality: String(r.municipality || ''),
+        bedrooms: String(r.bedrooms || 'todos'),
+        minPrice: r.min_price !== null && r.min_price !== undefined ? Number(r.min_price) : '',
+        maxPrice: r.max_price !== null && r.max_price !== undefined ? Number(r.max_price) : '',
+        keyword: String(r.keyword || ''),
+        notifyChannel: (r.notify_channel || 'whatsapp') as any,
+        active: Boolean(r.active),
+        lastNotifiedAt: r.last_notified_at ? new Date(r.last_notified_at).toISOString() : undefined,
+        createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+      }));
+    } catch (err) {
+      console.warn('Erro ao carregar alertas do Neon:', err);
+      return [];
+    }
+  },
+
+  async savePropertyAlert(alert: PropertyAlert): Promise<void> {
+    try {
+      await sql`
+        INSERT INTO property_alerts (
+          id, user_id, name, deal_type, category, province, municipality,
+          bedrooms, min_price, max_price, keyword, notify_channel, active, created_at
+        ) VALUES (
+          ${alert.id},
+          ${alert.userId},
+          ${alert.name},
+          ${alert.dealType},
+          ${alert.category},
+          ${alert.province},
+          ${alert.municipality},
+          ${alert.bedrooms},
+          ${alert.minPrice !== '' ? Number(alert.minPrice) : null},
+          ${alert.maxPrice !== '' ? Number(alert.maxPrice) : null},
+          ${alert.keyword || ''},
+          ${alert.notifyChannel || 'whatsapp'},
+          ${Boolean(alert.active)},
+          NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          deal_type = EXCLUDED.deal_type,
+          category = EXCLUDED.category,
+          province = EXCLUDED.province,
+          municipality = EXCLUDED.municipality,
+          bedrooms = EXCLUDED.bedrooms,
+          min_price = EXCLUDED.min_price,
+          max_price = EXCLUDED.max_price,
+          keyword = EXCLUDED.keyword,
+          notify_channel = EXCLUDED.notify_channel,
+          active = EXCLUDED.active
+      `;
+    } catch (err) {
+      console.error('Erro ao salvar alerta no Neon:', err);
+      throw err;
+    }
+  },
+
+  async deletePropertyAlert(alertId: string): Promise<void> {
+    try {
+      await sql`DELETE FROM property_alerts WHERE id = ${alertId}`;
+    } catch (err) {
+      console.error(`Erro ao apagar alerta ${alertId}:`, err);
+      throw err;
+    }
+  },
+
+  async togglePropertyAlertActive(alertId: string, currentActive: boolean): Promise<void> {
+    try {
+      await sql`UPDATE property_alerts SET active = ${!currentActive} WHERE id = ${alertId}`;
+    } catch (err) {
+      console.error(`Erro ao alternar status do alerta ${alertId}:`, err);
+      throw err;
+    }
+  },
+
+  subscribePropertyAlerts(userId: string, onUpdate: (alerts: PropertyAlert[]) => void): () => void {
+    const fetchAlerts = async () => {
+      const list = await this.getUserAlerts(userId);
+      onUpdate(list);
+    };
+    fetchAlerts();
+    const timer = setInterval(fetchAlerts, 8000);
+    return () => clearInterval(timer);
+  },
+
+  matchesAlert(property: Property, alert: PropertyAlert): boolean {
+    if (!alert.active) return false;
+    if (alert.dealType !== 'todos' && property.dealType !== alert.dealType) return false;
+    if (alert.category && property.category !== alert.category) return false;
+    if (alert.province && property.province.toLowerCase() !== alert.province.toLowerCase()) return false;
+    if (alert.municipality && property.municipality.toLowerCase() !== alert.municipality.toLowerCase()) return false;
+    if (alert.bedrooms && alert.bedrooms !== 'todos') {
+      const bCount = Number(alert.bedrooms.replace('+', ''));
+      if (alert.bedrooms.includes('+')) {
+        if (property.bedrooms < bCount) return false;
+      } else {
+        if (property.bedrooms !== bCount) return false;
+      }
+    }
+    if (alert.minPrice !== '' && property.price < Number(alert.minPrice)) return false;
+    if (alert.maxPrice !== '' && property.price > Number(alert.maxPrice)) return false;
+    if (alert.keyword) {
+      const kw = alert.keyword.toLowerCase();
+      const inTitle = property.title.toLowerCase().includes(kw);
+      const inDesc = property.description.toLowerCase().includes(kw);
+      const inNeigh = property.neighborhood.toLowerCase().includes(kw);
+      if (!inTitle && !inDesc && !inNeigh) return false;
+    }
+    return true;
+  },
+
+  /**
+   * Notificações de Alertas de Imóveis
+   */
+  async createAlertNotification(notif: AlertNotification): Promise<void> {
+    try {
+      await sql`
+        INSERT INTO alert_notifications (
+          id, user_id, alert_id, alert_name, property_id, property_title,
+          property_code, property_price, property_image, deal_type, location,
+          read, created_at
+        ) VALUES (
+          ${notif.id},
+          ${notif.userId},
+          ${notif.alertId},
+          ${notif.alertName},
+          ${notif.propertyId},
+          ${notif.propertyTitle},
+          ${notif.propertyCode || null},
+          ${Number(notif.propertyPrice || 0)},
+          ${notif.propertyImage || null},
+          ${notif.dealType},
+          ${notif.location || null},
+          ${Boolean(notif.read)},
+          NOW()
+        )
+        ON CONFLICT (id) DO NOTHING
+      `;
+    } catch (err) {
+      console.warn('Erro ao salvar notificação no Neon:', err);
+    }
+  },
+
+  async markNotificationRead(notificationId: string): Promise<void> {
+    try {
+      await sql`UPDATE alert_notifications SET read = TRUE WHERE id = ${notificationId}`;
+    } catch (err) {
+      console.warn(`Erro ao marcar notificação ${notificationId} como lida:`, err);
+    }
+  },
+
+  async markAllNotificationsRead(userId: string, unreadIds: string[]): Promise<void> {
+    try {
+      if (unreadIds.length > 0) {
+        await sql`
+          UPDATE alert_notifications SET read = TRUE
+          WHERE user_id = ${userId} AND id = ANY(${unreadIds})
+        `;
+      }
+    } catch (err) {
+      console.warn('Erro ao marcar todas notificações como lidas:', err);
+    }
+  },
+
+  async deleteNotification(notificationId: string): Promise<void> {
+    try {
+      await sql`DELETE FROM alert_notifications WHERE id = ${notificationId}`;
+    } catch (err) {
+      console.warn(`Erro ao eliminar notificação ${notificationId}:`, err);
+    }
+  },
+
+  subscribeAlertNotifications(userId: string, onUpdate: (notifs: AlertNotification[]) => void): () => void {
+    const fetchNotifs = async () => {
+      try {
+        const rows = await sql`
+          SELECT * FROM alert_notifications WHERE user_id = ${userId} ORDER BY created_at DESC
+        `;
+        const mapped: AlertNotification[] = rows.map((r) => ({
+          id: String(r.id),
+          userId: String(r.user_id),
+          alertId: String(r.alert_id),
+          alertName: String(r.alert_name),
+          propertyId: String(r.property_id),
+          propertyTitle: String(r.property_title),
+          propertyCode: r.property_code ? String(r.property_code) : undefined,
+          propertyPrice: Number(r.property_price || 0),
+          propertyImage: r.property_image ? String(r.property_image) : undefined,
+          dealType: (r.deal_type || 'venda') as any,
+          location: String(r.location || ''),
+          read: Boolean(r.read),
+          createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+        }));
+        onUpdate(mapped);
+      } catch (err) {
+        console.warn('Erro ao buscar notificações do Neon:', err);
+      }
+    };
+    fetchNotifs();
+    const timer = setInterval(fetchNotifs, 8000);
+    return () => clearInterval(timer);
+  },
+
+  /**
+   * Chat e Conversas de Atendimento
+   */
+  async saveConversation(conv: Conversation): Promise<void> {
+    try {
+      await sql`
+        INSERT INTO conversations (
+          id, visitor_id, client_name, client_phone, last_message,
+          last_message_at, unread_by_admin, unread_by_user, property_interest_id,
+          property_title, created_at
+        ) VALUES (
+          ${conv.id},
+          ${conv.visitorId},
+          ${conv.clientName},
+          ${conv.clientPhone || null},
+          ${conv.lastMessage},
+          NOW(),
+          ${conv.unreadByAdmin || 0},
+          ${conv.unreadByUser || 0},
+          ${conv.propertyInterestId || null},
+          ${conv.propertyTitle || null},
+          NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          last_message = EXCLUDED.last_message,
+          last_message_at = NOW(),
+          unread_by_admin = EXCLUDED.unread_by_admin,
+          unread_by_user = EXCLUDED.unread_by_user
+      `;
+    } catch (err) {
+      console.warn('Erro ao salvar conversa no Neon:', err);
+    }
+  },
+
+  async saveMessage(msg: Message): Promise<void> {
+    try {
+      const id = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      await sql`
+        INSERT INTO messages (id, conversation_id, sender, sender_name, text, timestamp, read)
+        VALUES (${id}, ${msg.conversationId}, ${msg.sender}, ${msg.senderName}, ${msg.text}, NOW(), ${Boolean(msg.read)})
+      `;
+    } catch (err) {
+      console.warn('Erro ao salvar mensagem no Neon:', err);
+    }
+  },
+
+  subscribeConversations(
+    onUpdate: (conversations: Conversation[]) => void,
+    onError?: (err: Error) => void
+  ): () => void {
+    const fetchConvs = async () => {
+      try {
+        const rows = await sql`SELECT * FROM conversations ORDER BY last_message_at DESC`;
+        const mapped: Conversation[] = rows.map((r) => ({
+          id: String(r.id),
+          visitorId: String(r.visitor_id),
+          clientName: String(r.client_name),
+          clientPhone: r.client_phone ? String(r.client_phone) : undefined,
+          lastMessage: String(r.last_message || ''),
+          lastMessageAt: r.last_message_at ? new Date(r.last_message_at).toISOString() : new Date().toISOString(),
+          unreadByAdmin: Number(r.unread_by_admin || 0),
+          unreadByUser: Number(r.unread_by_user || 0),
+          propertyInterestId: r.property_interest_id ? String(r.property_interest_id) : undefined,
+          propertyTitle: r.property_title ? String(r.property_title) : undefined,
+          createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+        }));
+        onUpdate(mapped);
+      } catch (err: any) {
+        if (onError) onError(err);
+      }
+    };
+
+    fetchConvs();
+    const timer = setInterval(fetchConvs, 8000);
+    return () => clearInterval(timer);
   },
 
   subscribeMessages(
     conversationId: string,
-    callback: (messages: Message[]) => void,
-    onError?: (err: any) => void
-  ) {
-    const path = `conversations/${conversationId}/messages`;
-    const q = query(collection(db, path), orderBy('timestamp', 'asc'));
-
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        const items = snapshot.docs.map((d) => ({
-          ...d.data(),
-          id: d.id,
-        })) as Message[];
-        callback(items);
-      },
-      (error) => {
-        console.warn('Erro ao escutar mensagens:', error.message);
-        if (onError) onError(error);
+    onUpdate: (messages: Message[]) => void,
+    onError?: (err: Error) => void
+  ): () => void {
+    const fetchMsgs = async () => {
+      try {
+        const rows = await sql`
+          SELECT * FROM messages WHERE conversation_id = ${conversationId} ORDER BY timestamp ASC
+        `;
+        const mapped: Message[] = rows.map((r) => ({
+          id: String(r.id),
+          conversationId: String(r.conversation_id),
+          sender: (r.sender || 'user') as 'user' | 'admin',
+          senderName: String(r.sender_name || ''),
+          text: String(r.text || ''),
+          timestamp: r.timestamp ? new Date(r.timestamp).toISOString() : new Date().toISOString(),
+          read: Boolean(r.read),
+        }));
+        onUpdate(mapped);
+      } catch (err: any) {
+        if (onError) onError(err);
       }
-    );
+    };
+
+    fetchMsgs();
+    const timer = setInterval(fetchMsgs, 4000);
+    return () => clearInterval(timer);
+  },
+
+  async markConversationRead(conversationId: string, isAdminRole: boolean): Promise<void> {
+    try {
+      if (isAdminRole) {
+        await sql`UPDATE conversations SET unread_by_admin = 0 WHERE id = ${conversationId}`;
+      } else {
+        await sql`UPDATE conversations SET unread_by_user = 0 WHERE id = ${conversationId}`;
+      }
+    } catch (err) {
+      console.warn('Erro ao marcar conversa como lida:', err);
+    }
+  },
+
+  async sendAdminReply(
+    conversationId: string,
+    adminNameOrText: string,
+    possibleReplyText?: string
+  ): Promise<void> {
+    try {
+      const senderName = possibleReplyText ? adminNameOrText : 'Equipa A.PANZO';
+      const replyText = possibleReplyText ? possibleReplyText : adminNameOrText;
+
+      const msgId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      await sql`
+        INSERT INTO messages (id, conversation_id, sender, sender_name, text, timestamp, read)
+        VALUES (${msgId}, ${conversationId}, 'admin', ${senderName}, ${replyText}, NOW(), TRUE)
+      `;
+      await sql`
+        UPDATE conversations SET
+          last_message = ${replyText},
+          last_message_at = NOW(),
+          unread_by_user = unread_by_user + 1
+        WHERE id = ${conversationId}
+      `;
+    } catch (err) {
+      console.error('Erro ao enviar resposta do admin:', err);
+      throw err;
+    }
   },
 
   async sendClientMessage(
@@ -487,426 +977,137 @@ export const dbService = {
     clientName: string,
     clientPhone: string,
     text: string,
-    propertyInfo?: { id: string; title: string }
+    propertyPayload?: { id: string; title: string }
   ): Promise<void> {
-    const now = new Date().toISOString();
-    const msgId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-
-    // Update conversation record
-    const convData: Partial<Conversation> = {
-      id: conversationId,
-      visitorId,
-      clientName: clientName.trim() || 'Visitante',
-      clientPhone: clientPhone.trim() || '',
-      lastMessage: text,
-      lastMessageAt: now,
-      unreadByAdmin: 1,
-      createdAt: now,
-    };
-    if (propertyInfo) {
-      convData.propertyInterestId = propertyInfo.id;
-      convData.propertyTitle = propertyInfo.title;
-    }
-
     try {
-      await setDoc(doc(db, 'conversations', conversationId), cleanFirestoreData(convData), { merge: true });
-
-      // Add message
-      await setDoc(doc(db, `conversations/${conversationId}/messages`, msgId), {
-        id: msgId,
-        conversationId,
-        sender: 'user',
-        senderName: clientName.trim() || 'Visitante',
-        text,
-        timestamp: now,
-        read: false,
-      });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `conversations/${conversationId}`);
-    }
-  },
-
-  async sendAdminReply(
-    conversationId: string,
-    adminName: string,
-    text: string
-  ): Promise<void> {
-    const now = new Date().toISOString();
-    const msgId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-
-    try {
-      await setDoc(doc(db, 'conversations', conversationId), {
+      await this.saveConversation({
+        id: conversationId,
+        visitorId,
+        clientName,
+        clientPhone,
         lastMessage: text,
-        lastMessageAt: now,
-        unreadByAdmin: 0,
-        unreadByUser: 1,
-      }, { merge: true });
-
-      await setDoc(doc(db, `conversations/${conversationId}/messages`, msgId), {
-        id: msgId,
-        conversationId,
-        sender: 'admin',
-        senderName: adminName || 'Aliança Imobiliária',
-        text,
-        timestamp: now,
-        read: false,
-      });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `conversations/${conversationId}`);
-    }
-  },
-
-  async markConversationRead(conversationId: string, byAdmin: boolean): Promise<void> {
-    try {
-      await setDoc(
-        doc(db, 'conversations', conversationId),
-        byAdmin ? { unreadByAdmin: 0 } : { unreadByUser: 0 },
-        { merge: true }
-      );
-    } catch (err) {
-      console.warn('Erro ao atualizar leitura da conversa:', err);
-    }
-  },
-
-  // --- FAVORITES ---
-  subscribeFavorites(
-    userId: string,
-    callback: (favorites: Favorite[]) => void,
-    onError?: (err: any) => void
-  ) {
-    if (!userId) {
-      callback([]);
-      return () => {};
-    }
-
-    const path = 'favorites';
-    const q = query(collection(db, path), where('userId', '==', userId));
-
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        const items = snapshot.docs.map((d) => ({
-          ...d.data(),
-          id: d.id,
-        })) as Favorite[];
-        callback(items);
-      },
-      (error) => {
-        console.warn('Erro ao escutar favoritos do Firestore:', error.message);
-        if (onError) onError(error);
-      }
-    );
-  },
-
-  async addFavorite(userId: string, propertyId: string): Promise<void> {
-    const id = `${userId}_${propertyId}`;
-    const path = `favorites/${id}`;
-    try {
-      await setDoc(doc(db, 'favorites', id), {
-        id,
-        userId,
-        propertyId,
+        lastMessageAt: new Date().toISOString(),
+        unreadByAdmin: 1,
+        unreadByUser: 0,
+        propertyInterestId: propertyPayload?.id,
+        propertyTitle: propertyPayload?.title,
         createdAt: new Date().toISOString(),
       });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, path);
-    }
-  },
 
-  async removeFavorite(userId: string, propertyId: string): Promise<void> {
-    const id = `${userId}_${propertyId}`;
-    const path = `favorites/${id}`;
-    try {
-      await deleteDoc(doc(db, 'favorites', id));
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, path);
-    }
-  },
-
-  async syncLocalFavoritesToUser(userId: string, propertyIds: string[]): Promise<void> {
-    if (!userId || !propertyIds.length) return;
-    try {
-      await Promise.all(
-        propertyIds.map((propertyId) =>
-          setDoc(
-            doc(db, 'favorites', `${userId}_${propertyId}`),
-            {
-              id: `${userId}_${propertyId}`,
-              userId,
-              propertyId,
-              createdAt: new Date().toISOString(),
-            },
-            { merge: true }
-          )
-        )
-      );
-    } catch (err) {
-      console.warn('Erro ao sincronizar favoritos locais:', err);
-    }
-  },
-
-  // --- PROPERTY ALERTS ---
-  subscribePropertyAlerts(
-    userId: string,
-    callback: (alerts: PropertyAlert[]) => void,
-    onError?: (err: any) => void
-  ) {
-    if (!userId) {
-      callback([]);
-      return () => {};
-    }
-
-    const path = 'alerts';
-    const q = query(collection(db, path), where('userId', '==', userId));
-
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        const items = snapshot.docs.map((d) => ({
-          ...d.data(),
-          id: d.id,
-        })) as PropertyAlert[];
-        // Sort in memory by createdAt desc
-        items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        callback(items);
-      },
-      (error) => {
-        console.warn('Erro ao escutar alertas de pesquisa:', error.message);
-        if (onError) onError(error);
-      }
-    );
-  },
-
-  async savePropertyAlert(alert: PropertyAlert): Promise<void> {
-    const path = `alerts/${alert.id}`;
-    try {
-      await setDoc(doc(db, 'alerts', alert.id), cleanFirestoreData(alert), { merge: true });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, path);
-    }
-  },
-
-  async deletePropertyAlert(alertId: string): Promise<void> {
-    const path = `alerts/${alertId}`;
-    try {
-      await deleteDoc(doc(db, 'alerts', alertId));
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, path);
-    }
-  },
-
-  async togglePropertyAlertActive(alertId: string, currentActive: boolean): Promise<void> {
-    const path = `alerts/${alertId}`;
-    try {
-      await setDoc(
-        doc(db, 'alerts', alertId),
-        { active: !currentActive },
-        { merge: true }
-      );
-    } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, path);
-    }
-  },
-
-  // --- ALERT NOTIFICATIONS ---
-  subscribeAlertNotifications(
-    userId: string,
-    callback: (notifications: AlertNotification[]) => void,
-    onError?: (err: any) => void
-  ) {
-    if (!userId) {
-      callback([]);
-      return () => {};
-    }
-
-    const path = 'notifications';
-    const q = query(collection(db, path), where('userId', '==', userId));
-
-    return onSnapshot(
-      q,
-      (snapshot) => {
-        const items = snapshot.docs.map((d) => ({
-          ...d.data(),
-          id: d.id,
-        })) as AlertNotification[];
-        // Sort in memory by createdAt desc
-        items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        callback(items);
-      },
-      (error) => {
-        console.warn('Erro ao escutar notificações:', error.message);
-        if (onError) onError(error);
-      }
-    );
-  },
-
-  async markNotificationRead(notificationId: string): Promise<void> {
-    const path = `notifications/${notificationId}`;
-    try {
-      await setDoc(doc(db, 'notifications', notificationId), { read: true }, { merge: true });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.UPDATE, path);
-    }
-  },
-
-  async markAllNotificationsRead(userId: string, notificationIds: string[]): Promise<void> {
-    if (!userId || !notificationIds.length) return;
-    try {
-      await Promise.all(
-        notificationIds.map((id) =>
-          setDoc(doc(db, 'notifications', id), { read: true }, { merge: true })
-        )
-      );
-    } catch (err) {
-      console.warn('Erro ao marcar notificações como lidas:', err);
-    }
-  },
-
-  async deleteNotification(notificationId: string): Promise<void> {
-    const path = `notifications/${notificationId}`;
-    try {
-      await deleteDoc(doc(db, 'notifications', notificationId));
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, path);
-    }
-  },
-
-  async createAlertNotification(notif: AlertNotification): Promise<void> {
-    const path = `notifications/${notif.id}`;
-    try {
-      await setDoc(doc(db, 'notifications', notif.id), cleanFirestoreData(notif));
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, path);
-    }
-  },
-
-  // --- MATCHING HELPER ---
-  matchesAlert(property: Property, alert: PropertyAlert): boolean {
-    if (!alert || !alert.active || !property) return false;
-
-    // Deal type check
-    if (alert.dealType && alert.dealType !== 'todos') {
-      if (property.dealType !== alert.dealType) return false;
-    }
-
-    // Category check
-    if (alert.category) {
-      if (property.category !== alert.category) return false;
-    }
-
-    // Province check
-    if (alert.province && alert.province.trim()) {
-      const propProv = (property.province || '').toLowerCase().trim();
-      const alertProv = alert.province.toLowerCase().trim();
-      if (propProv !== alertProv) return false;
-    }
-
-    // Municipality check
-    if (alert.municipality && alert.municipality.trim()) {
-      const propMuni = (property.municipality || '').toLowerCase().trim();
-      const alertMuni = alert.municipality.toLowerCase().trim();
-      if (!propMuni.includes(alertMuni)) {
-        return false;
-      }
-    }
-
-    // Bedrooms check
-    if (alert.bedrooms && alert.bedrooms !== 'todos') {
-      const propBeds = Number(property.bedrooms) || 0;
-      if (alert.bedrooms === '5+') {
-        if (propBeds < 5) return false;
-      } else {
-        const targetBeds = parseInt(alert.bedrooms, 10);
-        if (propBeds !== targetBeds) return false;
-      }
-    }
-
-    // Price range check
-    const propPrice = typeof property.price === 'number' ? property.price : 0;
-    if (typeof alert.minPrice === 'number' && alert.minPrice > 0) {
-      if (propPrice < alert.minPrice) return false;
-    }
-    if (typeof alert.maxPrice === 'number' && alert.maxPrice > 0) {
-      if (propPrice > alert.maxPrice) return false;
-    }
-
-    // Keyword search
-    if (alert.keyword && alert.keyword.trim()) {
-      const q = alert.keyword.toLowerCase().trim();
-      const match =
-        (property.title || '').toLowerCase().includes(q) ||
-        (property.code || '').toLowerCase().includes(q) ||
-        (property.neighborhood || '').toLowerCase().includes(q) ||
-        (property.description || '').toLowerCase().includes(q);
-      if (!match) return false;
-    }
-
-    return true;
-  },
-
-  // ----------------------------------------------------
-  // PARTNERS (B2B) MODULE
-  // ----------------------------------------------------
-
-  async savePartnerProfile(partner: PartnerProfile): Promise<void> {
-    try {
-      const partnerDocRef = doc(db, 'partners', partner.userId);
-      const cleanData = cleanFirestoreData({
-        ...partner,
-        updatedAt: new Date().toISOString(),
+      await this.saveMessage({
+        id: `msg-${Date.now()}`,
+        conversationId,
+        sender: 'user',
+        senderName: clientName,
+        text,
+        timestamp: new Date().toISOString(),
+        read: false,
       });
-      await setDoc(partnerDocRef, cleanData, { merge: true });
-
-      // Also ensure role 'partner' in users collection
-      const userDocRef = doc(db, 'users', partner.userId);
-      await setDoc(
-        userDocRef,
-        {
-          role: 'partner',
-          partnerId: partner.userId,
-          companyName: partner.companyName,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'partners');
-      throw error;
+    } catch (err) {
+      console.error('Erro ao enviar mensagem do cliente:', err);
     }
   },
 
-  async getPartnerProfile(userId: string): Promise<PartnerProfile | null> {
+  async saveProperty(property: Property): Promise<string> {
+    if (property.id) {
+      await this.updateProperty(property.id, property);
+      return property.id;
+    }
+    return this.addProperty(property);
+  },
+
+  async uploadBatchPropertyImages(
+    files: File[] | FileList,
+    onProgress?: (info: UploadProgressInfo) => void
+  ): Promise<string[]> {
+    const fileArray = Array.isArray(files) ? files : Array.from(files);
+    return batchUploadPropertyPhotos(fileArray, onProgress);
+  },
+
+  async saveCategory(category: Category): Promise<void> {
     try {
-      const partnerDocRef = doc(db, 'partners', userId);
-      const snap = await getDoc(partnerDocRef);
-      if (snap.exists()) {
-        return snap.data() as PartnerProfile;
-      }
-      return null;
-    } catch (error) {
-      console.warn('Erro ao carregar perfil de parceiro:', error);
-      return null;
+      await sql`
+        INSERT INTO categories (id, name, slug, type, icon, order_index, is_active)
+        VALUES (
+          ${category.id},
+          ${category.name},
+          ${category.slug},
+          ${category.type},
+          ${category.icon || null},
+          ${category.order || 0},
+          ${Boolean(category.isActive)}
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          slug = EXCLUDED.slug,
+          type = EXCLUDED.type,
+          icon = EXCLUDED.icon,
+          order_index = EXCLUDED.order_index,
+          is_active = EXCLUDED.is_active
+      `;
+    } catch (err) {
+      console.error('Erro ao salvar categoria no Neon:', err);
+      throw err;
     }
   },
 
-  async getAllPartners(): Promise<PartnerProfile[]> {
+  async deleteCategory(id: string): Promise<void> {
     try {
-      const snap = await getDocs(collection(db, 'partners'));
-      return snap.docs.map((d) => d.data() as PartnerProfile);
-    } catch (error) {
-      console.warn('Erro ao listar parceiros:', error);
-      return [];
+      await sql`DELETE FROM categories WHERE id = ${id}`;
+    } catch (err) {
+      console.error('Erro ao eliminar categoria no Neon:', err);
+      throw err;
     }
   },
 
-  async updatePartnerStatus(userId: string, status: 'active' | 'pending' | 'suspended'): Promise<void> {
+  async saveLocation(location: LocationConfig): Promise<void> {
     try {
-      const partnerDocRef = doc(db, 'partners', userId);
-      await setDoc(partnerDocRef, { status, updatedAt: new Date().toISOString() }, { merge: true });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, 'partners');
-      throw error;
+      await sql`
+        INSERT INTO locations (id, province, municipalities, order_index)
+        VALUES (
+          ${location.id},
+          ${location.province},
+          ${JSON.stringify(location.municipalities || [])},
+          ${location.order || 0}
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          province = EXCLUDED.province,
+          municipalities = EXCLUDED.municipalities,
+          order_index = EXCLUDED.order_index
+      `;
+    } catch (err) {
+      console.error('Erro ao salvar localização no Neon:', err);
+      throw err;
+    }
+  },
+
+  async deleteLocation(id: string): Promise<void> {
+    try {
+      await sql`DELETE FROM locations WHERE id = ${id}`;
+    } catch (err) {
+      console.error('Erro ao eliminar localização no Neon:', err);
+      throw err;
+    }
+  },
+
+  async recordUserLogin(
+    uid: string,
+    email: string,
+    displayName: string,
+    photoUrl: string
+  ): Promise<void> {
+    try {
+      await sql`
+        INSERT INTO users (uid, email, display_name, photo_url, last_login_at, created_at)
+        VALUES (${uid}, ${email}, ${displayName}, ${photoUrl || null}, NOW(), NOW())
+        ON CONFLICT (uid) DO UPDATE SET
+          email = EXCLUDED.email,
+          display_name = EXCLUDED.display_name,
+          photo_url = COALESCE(EXCLUDED.photo_url, users.photo_url),
+          last_login_at = NOW()
+      `;
+    } catch (err) {
+      console.warn('Erro ao registrar usuário no Neon:', err);
     }
   },
 };
-
