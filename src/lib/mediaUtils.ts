@@ -81,15 +81,15 @@ export async function compressImageToDataUrl(
     quality?: number;
   }
 ): Promise<string> {
-  const maxWidth = options?.maxWidth || 1440;
-  const maxHeight = options?.maxHeight || 1440;
-  // Qualidade padrão de 86% para máxima nitidez sem granularidade
-  const quality = Math.min(0.92, Math.max(0.85, options?.quality || 0.86));
+  const maxWidth = options?.maxWidth || 1024;
+  const maxHeight = options?.maxHeight || 768;
+  // Qualidade calibrada para alta nitidez e tamanho super leve (~50KB por foto)
+  const quality = Math.min(0.85, Math.max(0.65, options?.quality || 0.74));
 
   return new Promise(async (resolve, reject) => {
     const timeout = setTimeout(() => {
       reject(new Error(`Tempo limite excedido ao processar imagem: ${file.name}`));
-    }, 35000);
+    }, 20000);
 
     try {
       // 1. Método Moderno: Tentar createImageBitmap com correção nativa de orientação EXIF

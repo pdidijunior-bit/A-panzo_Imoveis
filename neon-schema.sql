@@ -1,7 +1,10 @@
 -- ========================================================
--- SCHEMA NEON POSTGRES (LAKEBASE POSTGRES)
--- A.PANZO IMOBILIÁRIA (Angola)
+-- SCHEMA NEON POSTGRES OFICIAL: A.PANZO IMOBILIÁRIA (Angola)
+-- Pode copiar e colar diretamente no SQL Editor do Neon e clicar em "Corre"
 -- ========================================================
+
+-- Limpa a tabela de teste padrão do tutorial do Neon (se existir)
+DROP TABLE IF EXISTS playing_with_neon;
 
 -- Habilitar extensões úteis no Postgres
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -12,7 +15,7 @@ CREATE TABLE IF NOT EXISTS categories (
   id VARCHAR(64) PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   slug VARCHAR(120) NOT NULL UNIQUE,
-  type VARCHAR(32) NOT NULL DEFAULT 'residential', -- residential, commercial, land, service
+  type VARCHAR(32) NOT NULL DEFAULT 'residential',
   icon VARCHAR(64),
   order_index INT NOT NULL DEFAULT 0,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -28,7 +31,7 @@ CREATE TABLE IF NOT EXISTS locations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 3. PERFIL DE PARCEIROS E CORRETORES
+-- 3. PERFIL DE PARCEIROS E CORRETORES CREDENCIADOS
 CREATE TABLE IF NOT EXISTS partners (
   id VARCHAR(128) PRIMARY KEY,
   user_id VARCHAR(128) NOT NULL,
@@ -41,7 +44,7 @@ CREATE TABLE IF NOT EXISTS partners (
   province VARCHAR(100),
   municipality VARCHAR(100),
   validation_documents TEXT,
-  status VARCHAR(32) NOT NULL DEFAULT 'pending', -- active, pending, suspended
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -49,16 +52,16 @@ CREATE TABLE IF NOT EXISTS partners (
 CREATE INDEX IF NOT EXISTS idx_partners_status ON partners (status);
 CREATE INDEX IF NOT EXISTS idx_partners_email ON partners (email);
 
--- 4. IMÓVEIS
+-- 4. CATÁLOGO PRINCIPAL DE IMÓVEIS
 CREATE TABLE IF NOT EXISTS properties (
   id VARCHAR(128) PRIMARY KEY,
-  code VARCHAR(40) NOT NULL UNIQUE,
+  code VARCHAR(40) NOT NULL,
   title VARCHAR(255) NOT NULL,
-  deal_type VARCHAR(32) NOT NULL DEFAULT 'venda', -- venda, arrendamento, trespasse
+  deal_type VARCHAR(32) NOT NULL DEFAULT 'venda',
   category VARCHAR(64) NOT NULL,
   category_name VARCHAR(120) NOT NULL,
   price NUMERIC(15, 2) NOT NULL,
-  currency VARCHAR(10) NOT NULL DEFAULT 'AOA', -- AOA, USD, EUR
+  currency VARCHAR(10) NOT NULL DEFAULT 'AOA',
   is_negotiable BOOLEAN NOT NULL DEFAULT FALSE,
   province VARCHAR(100) NOT NULL,
   municipality VARCHAR(100) NOT NULL,
@@ -68,8 +71,8 @@ CREATE TABLE IF NOT EXISTS properties (
   bedrooms INT NOT NULL DEFAULT 0,
   bathrooms INT NOT NULL DEFAULT 0,
   parking_spaces INT NOT NULL DEFAULT 0,
-  condition VARCHAR(32) NOT NULL DEFAULT 'usado', -- novo, usado, em_construcao, remodelado
-  status VARCHAR(32) NOT NULL DEFAULT 'disponivel', -- disponivel, reservado, vendido, arrendado
+  condition VARCHAR(32) NOT NULL DEFAULT 'usado',
+  status VARCHAR(32) NOT NULL DEFAULT 'disponivel',
   is_featured BOOLEAN NOT NULL DEFAULT FALSE,
   features JSONB DEFAULT '[]'::jsonb,
   description TEXT NOT NULL,
@@ -89,7 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_properties_municipality ON properties (municipali
 CREATE INDEX IF NOT EXISTS idx_properties_price ON properties (price);
 CREATE INDEX IF NOT EXISTS idx_properties_featured ON properties (is_featured);
 
--- 5. CONFIGURAÇÕES DA EMPRESA
+-- 5. CONFIGURAÇÕES OFICIAIS DA IMOBILIÁRIA A.PANZO
 CREATE TABLE IF NOT EXISTS site_settings (
   id VARCHAR(64) PRIMARY KEY DEFAULT 'default',
   hero_title VARCHAR(255) NOT NULL,
@@ -118,7 +121,7 @@ CREATE TABLE IF NOT EXISTS site_settings (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 6. FAVORITOS
+-- 6. FAVORITOS DOS CLIENTES
 CREATE TABLE IF NOT EXISTS favorites (
   id VARCHAR(150) PRIMARY KEY,
   user_id VARCHAR(128) NOT NULL,
@@ -129,7 +132,7 @@ CREATE TABLE IF NOT EXISTS favorites (
 
 CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites (user_id);
 
--- 7. ALERTAS DE IMÓVEIS
+-- 7. ALERTAS DE IMÓVEIS (RADAR)
 CREATE TABLE IF NOT EXISTS property_alerts (
   id VARCHAR(128) PRIMARY KEY,
   user_id VARCHAR(128) NOT NULL,
@@ -150,7 +153,26 @@ CREATE TABLE IF NOT EXISTS property_alerts (
 
 CREATE INDEX IF NOT EXISTS idx_alerts_user ON property_alerts (user_id);
 
--- 8. CONVERSAS E MENSAGENS DE ATENDIMENTO
+-- 8. NOTIFICAÇÕES DE ALERTAS
+CREATE TABLE IF NOT EXISTS alert_notifications (
+  id VARCHAR(160) PRIMARY KEY,
+  user_id VARCHAR(128) NOT NULL,
+  alert_id VARCHAR(128) NOT NULL,
+  alert_name VARCHAR(150) NOT NULL,
+  property_id VARCHAR(128) NOT NULL,
+  property_title VARCHAR(255) NOT NULL,
+  property_code VARCHAR(40),
+  property_price NUMERIC(15, 2) NOT NULL DEFAULT 0,
+  property_image TEXT,
+  deal_type VARCHAR(32) NOT NULL DEFAULT 'venda',
+  location VARCHAR(200),
+  read BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_notif_user ON alert_notifications (user_id);
+
+-- 9. CHAT DE ATENDIMENTO
 CREATE TABLE IF NOT EXISTS conversations (
   id VARCHAR(128) PRIMARY KEY,
   visitor_id VARCHAR(128) NOT NULL,
@@ -168,7 +190,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE TABLE IF NOT EXISTS messages (
   id VARCHAR(128) PRIMARY KEY,
   conversation_id VARCHAR(128) NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-  sender VARCHAR(32) NOT NULL, -- user, admin
+  sender VARCHAR(32) NOT NULL,
   sender_name VARCHAR(150) NOT NULL,
   text TEXT NOT NULL,
   timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -177,9 +199,30 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages (conversation_id);
 
--- ========================================================
--- SEED INICIAL A.PANZO
--- ========================================================
+-- 10. USUÁRIOS E ADMINISTRADORES
+CREATE TABLE IF NOT EXISTS users (
+  uid VARCHAR(128) PRIMARY KEY,
+  display_name VARCHAR(150),
+  email VARCHAR(160),
+  photo_url TEXT,
+  role VARCHAR(32) DEFAULT 'client',
+  last_login_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS admins (
+  id VARCHAR(128) PRIMARY KEY,
+  email VARCHAR(160) NOT NULL UNIQUE,
+  role VARCHAR(32) NOT NULL DEFAULT 'admin',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- INSERÇÃO DE DADOS INICIAIS DA A.PANZO
+INSERT INTO admins (id, email, role)
+VALUES ('admin_primary', 'anoterlove132@gmail.com', 'admin')
+ON CONFLICT (email) DO NOTHING;
+
 INSERT INTO site_settings (
   id, hero_title, hero_subtitle, phone, whatsapp, email, address, working_hours, logo_url
 ) VALUES (
@@ -194,10 +237,5 @@ INSERT INTO site_settings (
   '/panzo-logo.jpeg'
 ) ON CONFLICT (id) DO UPDATE SET updated_at = NOW();
 
-INSERT INTO categories (id, name, slug, type, order_index, is_active) VALUES
-('cat_vivenda', 'Vivendas & Casas', 'vivendas', 'residential', 1, TRUE),
-('cat_apto', 'Apartamentos', 'apartamentos', 'residential', 2, TRUE),
-('cat_terreno', 'Terrenos & Lotes', 'terrenos', 'land', 3, TRUE),
-('cat_comercial', 'Lojas & Escritórios', 'comercial', 'commercial', 4, TRUE),
-('cat_armazem', 'Armazéns Industriais', 'armazens', 'commercial', 5, TRUE)
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;
+-- Confirmação rápida
+SELECT 'Base de dados A.PANZO configurada com sucesso no Neon!' AS status;

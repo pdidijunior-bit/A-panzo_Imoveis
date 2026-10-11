@@ -17,16 +17,37 @@ import {
 import { DEFAULT_CATEGORIES, ANGOLA_LOCATIONS, DEFAULT_SITE_SETTINGS } from './defaultData';
 import { batchUploadPropertyPhotos, UploadProgressInfo } from './mediaUtils';
 
+// Persistent local cache key
+const CACHE_STORAGE_KEY = 'apanzo_cached_properties_v4';
+
+function loadInitialCache(): Property[] {
+  try {
+    const raw = typeof window !== 'undefined' ? localStorage.getItem(CACHE_STORAGE_KEY) : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
 // Event emitter helper for instant UI reactivity across components
 type Listener<T> = (data: T) => void;
 const propertyListeners = new Set<Listener<Property[]>>();
-let cachedProperties: Property[] = [];
+let cachedProperties: Property[] = loadInitialCache();
 
 function notifyPropertyListeners(props: Property[]) {
-  cachedProperties = props;
+  if (Array.isArray(props) && props.length > 0) {
+    cachedProperties = props;
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(props));
+      }
+    } catch {}
+  }
   propertyListeners.forEach((fn) => {
     try {
-      fn(props);
+      fn(cachedProperties);
     } catch (e) {
       console.warn('Property listener error:', e);
     }
@@ -288,18 +309,21 @@ export const dbService = {
   },
 
   /**
-   * Catálogo de Imóveis (Consulta e Atualização em Tempo Real)
+   * Catálogo de Imóveis (Consulta e Atualização em Tempo Real Ultra-Rápido)
    */
   async getProperties(): Promise<Property[]> {
     try {
       const rows = await sql`
         SELECT * FROM properties ORDER BY created_at DESC
       `;
-      const mapped = rows.map(mapRowToProperty);
-      notifyPropertyListeners(mapped);
-      return mapped;
+      if (Array.isArray(rows) && rows.length > 0) {
+        const mapped = rows.map(mapRowToProperty);
+        notifyPropertyListeners(mapped);
+        return mapped;
+      }
+      return cachedProperties;
     } catch (err) {
-      console.error('Erro ao buscar imóveis no Neon:', err);
+      console.warn('Conexão ao Neon ocupada; mantendo dados do cache:', err);
       return cachedProperties;
     }
   },
@@ -310,22 +334,42 @@ export const dbService = {
   ): () => void {
     propertyListeners.add(onUpdate);
 
-    // Initial fetch
+    // 1. Resposta imediata via cache (0ms de espera para o visitante)
+    if (cachedProperties.length > 0) {
+      onUpdate(cachedProperties);
+    }
+
+    // 2. Sincronização em background com a base Neon
     this.getProperties()
-      .then((items) => onUpdate(items))
+      .then((items) => {
+        if (items && items.length > 0) {
+          onUpdate(items);
+        }
+      })
       .catch((err) => {
-        if (onError) onError(err);
+        if (cachedProperties.length === 0 && onError) onError(err);
       });
 
-    // Periodic background sync (every 12 seconds)
+    // 3. Sincronização inteligente ao voltar para a aba do navegador
+    const handleTabFocus = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        this.getProperties().catch(() => {});
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleTabFocus);
+    }
+
+    // 4. Verificação periódica suave a cada 45 segundos (em vez de 12s para não sobrecarregar a rede)
     const interval = setInterval(() => {
-      this.getProperties()
-        .then((items) => onUpdate(items))
-        .catch(() => {});
-    }, 12000);
+      this.getProperties().catch(() => {});
+    }, 45000);
 
     return () => {
       propertyListeners.delete(onUpdate);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleTabFocus);
+      }
       clearInterval(interval);
     };
   },
@@ -557,7 +601,7 @@ export const dbService = {
       onUpdate(list.map((f) => ({ id: f.id, propertyId: f.propertyId })));
     };
     fetchFavs();
-    const timer = setInterval(fetchFavs, 8000);
+    const timer = setInterval(fetchFavs, 60000);
     return () => clearInterval(timer);
   },
 
@@ -657,7 +701,7 @@ export const dbService = {
       onUpdate(list);
     };
     fetchAlerts();
-    const timer = setInterval(fetchAlerts, 8000);
+    const timer = setInterval(fetchAlerts, 60000);
     return () => clearInterval(timer);
   },
 
@@ -775,7 +819,7 @@ export const dbService = {
       }
     };
     fetchNotifs();
-    const timer = setInterval(fetchNotifs, 8000);
+    const timer = setInterval(fetchNotifs, 60000);
     return () => clearInterval(timer);
   },
 
@@ -852,7 +896,7 @@ export const dbService = {
     };
 
     fetchConvs();
-    const timer = setInterval(fetchConvs, 8000);
+    const timer = setInterval(fetchConvs, 20000);
     return () => clearInterval(timer);
   },
 

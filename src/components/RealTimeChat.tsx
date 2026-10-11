@@ -69,9 +69,9 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
     }
   }, [currentUser]);
 
-  // Listen to messages in real time via Firestore onSnapshot
+  // Listen to messages in real time (only when chat is open)
   useEffect(() => {
-    if (!visitorId || !isRegistered) return;
+    if (!visitorId || !isRegistered || !isOpen) return;
 
     const unsubscribe = dbService.subscribeMessages(
       visitorId,
@@ -86,7 +86,7 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
     );
 
     return () => unsubscribe();
-  }, [visitorId, isRegistered]);
+  }, [visitorId, isRegistered, isOpen]);
 
   // Auto scroll to latest message
   useEffect(() => {
@@ -130,6 +130,18 @@ export const RealTimeChat: React.FC<RealTimeChatProps> = ({
     const textToSend = inputMessage.trim();
     setInputMessage('');
     setSending(true);
+
+    // Optimistic UI update for instant response
+    const optimisticMsg: Message = {
+      id: `local-${Date.now()}`,
+      conversationId: visitorId,
+      sender: 'user',
+      senderName: clientName || 'Eu',
+      text: textToSend,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
 
     try {
       const propertyPayload = attachedProperty
