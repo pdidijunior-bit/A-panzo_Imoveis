@@ -343,105 +343,59 @@ export const dbService = {
     }
   },
 
-  async addProperty(propertyData: Omit<Property, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    try {
-      const id = `prop-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-      const code = propertyData.code || `AP-${Math.floor(1000 + Math.random() * 9000)}`;
-
-      await sql`
-        INSERT INTO properties (
-          id, code, title, deal_type, category, category_name, price, currency,
-          is_negotiable, province, municipality, neighborhood, address_reference,
-          area, bedrooms, bathrooms, parking_spaces, condition, status, is_featured,
-          features, description, images, video_url, has_video, views_count, published_by,
-          created_at, updated_at
-        ) VALUES (
-          ${id},
-          ${code},
-          ${propertyData.title},
-          ${propertyData.dealType},
-          ${propertyData.category},
-          ${propertyData.categoryName},
-          ${Number(propertyData.price || 0)},
-          ${propertyData.currency || 'AOA'},
-          ${Boolean(propertyData.isNegotiable)},
-          ${propertyData.province},
-          ${propertyData.municipality},
-          ${propertyData.neighborhood},
-          ${propertyData.addressReference || null},
-          ${Number(propertyData.area || 0)},
-          ${Number(propertyData.bedrooms || 0)},
-          ${Number(propertyData.bathrooms || 0)},
-          ${Number(propertyData.parkingSpaces || 0)},
-          ${propertyData.condition || 'usado'},
-          ${propertyData.status || 'disponivel'},
-          ${Boolean(propertyData.isFeatured)},
-          ${JSON.stringify(propertyData.features || [])},
-          ${propertyData.description || ''},
-          ${JSON.stringify(propertyData.images || [])},
-          ${propertyData.videoUrl || null},
-          ${Boolean(propertyData.hasVideo)},
-          ${Number(propertyData.viewsCount || 0)},
-          ${propertyData.publishedBy || 'A.PANZO Imobiliária'},
-          NOW(),
-          NOW()
-        )
-      `;
-
-      await this.getProperties();
-      return id;
-    } catch (err) {
-      console.error('Erro ao adicionar imóvel no Neon:', err);
-      throw err;
-    }
+  async addProperty(propertyData: Omit<Property, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<string> {
+    const id = propertyData.id || `prop-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const fullProp: Property = {
+      ...propertyData,
+      id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    return this.saveProperty(fullProp);
   },
 
   async updateProperty(id: string, propertyData: Partial<Property>): Promise<void> {
-    try {
-      const existing = await this.getPropertyById(id);
-      if (!existing) throw new Error(`Imóvel ${id} não encontrado.`);
+    const existing = await this.getPropertyById(id);
+    const merged: Property = existing
+      ? {
+          ...existing,
+          ...propertyData,
+          id,
+          updatedAt: new Date().toISOString(),
+        }
+      : {
+          id,
+          title: propertyData.title || '',
+          code: propertyData.code || `AP-${Math.floor(1000 + Math.random() * 9000)}`,
+          dealType: propertyData.dealType || 'venda',
+          category: propertyData.category || '',
+          categoryName: propertyData.categoryName || '',
+          price: Number(propertyData.price || 0),
+          currency: propertyData.currency || 'AOA',
+          isNegotiable: Boolean(propertyData.isNegotiable),
+          province: propertyData.province || 'Luanda',
+          municipality: propertyData.municipality || 'Luanda',
+          neighborhood: propertyData.neighborhood || '',
+          addressReference: propertyData.addressReference,
+          area: Number(propertyData.area || 0),
+          bedrooms: Number(propertyData.bedrooms || 0),
+          bathrooms: Number(propertyData.bathrooms || 0),
+          parkingSpaces: Number(propertyData.parkingSpaces || 0),
+          condition: propertyData.condition || 'usado',
+          status: propertyData.status || 'disponivel',
+          isFeatured: Boolean(propertyData.isFeatured),
+          features: propertyData.features || [],
+          description: propertyData.description || '',
+          images: propertyData.images || [],
+          videoUrl: propertyData.videoUrl || null,
+          hasVideo: Boolean(propertyData.hasVideo),
+          viewsCount: Number(propertyData.viewsCount || 0),
+          publishedBy: propertyData.publishedBy,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
 
-      const merged: Property = {
-        ...existing,
-        ...propertyData,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await sql`
-        UPDATE properties SET
-          title = ${merged.title},
-          code = ${merged.code},
-          deal_type = ${merged.dealType},
-          category = ${merged.category},
-          category_name = ${merged.categoryName},
-          price = ${Number(merged.price || 0)},
-          currency = ${merged.currency},
-          is_negotiable = ${Boolean(merged.isNegotiable)},
-          province = ${merged.province},
-          municipality = ${merged.municipality},
-          neighborhood = ${merged.neighborhood},
-          address_reference = ${merged.addressReference || null},
-          area = ${Number(merged.area || 0)},
-          bedrooms = ${Number(merged.bedrooms || 0)},
-          bathrooms = ${Number(merged.bathrooms || 0)},
-          parking_spaces = ${Number(merged.parkingSpaces || 0)},
-          condition = ${merged.condition},
-          status = ${merged.status},
-          is_featured = ${Boolean(merged.isFeatured)},
-          features = ${JSON.stringify(merged.features || [])},
-          description = ${merged.description},
-          images = ${JSON.stringify(merged.images || [])},
-          video_url = ${merged.videoUrl || null},
-          has_video = ${Boolean(merged.hasVideo)},
-          updated_at = NOW()
-        WHERE id = ${id}
-      `;
-
-      await this.getProperties();
-    } catch (err) {
-      console.error(`Erro ao atualizar imóvel ${id} no Neon:`, err);
-      throw err;
-    }
+    await this.saveProperty(merged);
   },
 
   async deleteProperty(id: string): Promise<void> {
@@ -1009,11 +963,86 @@ export const dbService = {
   },
 
   async saveProperty(property: Property): Promise<string> {
-    if (property.id) {
-      await this.updateProperty(property.id, property);
-      return property.id;
+    try {
+      const id = property.id || `prop-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const code = property.code?.trim() || `AP-${Math.floor(1000 + Math.random() * 9000)}`;
+      const nowIso = new Date().toISOString();
+      const createdAt = property.createdAt ? new Date(property.createdAt).toISOString() : nowIso;
+
+      await sql`
+        INSERT INTO properties (
+          id, code, title, deal_type, category, category_name, price, currency,
+          is_negotiable, province, municipality, neighborhood, address_reference,
+          area, bedrooms, bathrooms, parking_spaces, condition, status, is_featured,
+          features, description, images, video_url, has_video, views_count, published_by,
+          created_at, updated_at
+        ) VALUES (
+          ${id},
+          ${code},
+          ${property.title},
+          ${property.dealType || 'venda'},
+          ${property.category || ''},
+          ${property.categoryName || ''},
+          ${Number(property.price || 0)},
+          ${property.currency || 'AOA'},
+          ${Boolean(property.isNegotiable)},
+          ${property.province || 'Luanda'},
+          ${property.municipality || 'Luanda'},
+          ${property.neighborhood || ''},
+          ${property.addressReference || null},
+          ${Number(property.area || 0)},
+          ${Number(property.bedrooms || 0)},
+          ${Number(property.bathrooms || 0)},
+          ${Number(property.parkingSpaces || 0)},
+          ${property.condition || 'usado'},
+          ${property.status || 'disponivel'},
+          ${Boolean(property.isFeatured)},
+          ${JSON.stringify(property.features || [])},
+          ${property.description || ''},
+          ${JSON.stringify(property.images || [])},
+          ${property.videoUrl || null},
+          ${Boolean(property.hasVideo)},
+          ${Number(property.viewsCount || 0)},
+          ${property.publishedBy || 'A.PANZO Imobiliária'},
+          ${createdAt},
+          NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          title = EXCLUDED.title,
+          code = EXCLUDED.code,
+          deal_type = EXCLUDED.deal_type,
+          category = EXCLUDED.category,
+          category_name = EXCLUDED.category_name,
+          price = EXCLUDED.price,
+          currency = EXCLUDED.currency,
+          is_negotiable = EXCLUDED.is_negotiable,
+          province = EXCLUDED.province,
+          municipality = EXCLUDED.municipality,
+          neighborhood = EXCLUDED.neighborhood,
+          address_reference = EXCLUDED.address_reference,
+          area = EXCLUDED.area,
+          bedrooms = EXCLUDED.bedrooms,
+          bathrooms = EXCLUDED.bathrooms,
+          parking_spaces = EXCLUDED.parking_spaces,
+          condition = EXCLUDED.condition,
+          status = EXCLUDED.status,
+          is_featured = EXCLUDED.is_featured,
+          features = EXCLUDED.features,
+          description = EXCLUDED.description,
+          images = EXCLUDED.images,
+          video_url = EXCLUDED.video_url,
+          has_video = EXCLUDED.has_video,
+          views_count = EXCLUDED.views_count,
+          published_by = EXCLUDED.published_by,
+          updated_at = NOW()
+      `;
+
+      await this.getProperties();
+      return id;
+    } catch (err) {
+      console.error('Erro ao gravar imóvel no Neon:', err);
+      throw err;
     }
-    return this.addProperty(property);
   },
 
   async uploadBatchPropertyImages(
