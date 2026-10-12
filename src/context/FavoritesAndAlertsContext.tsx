@@ -41,7 +41,8 @@ interface FavoritesAndAlertsContextType {
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
   authModalPrompt: string;
-  openAuthModal: (prompt?: string, onSuccess?: () => void) => void;
+  authModalMode: 'login' | 'signup';
+  openAuthModal: (prompt?: string, onSuccess?: () => void, mode?: 'login' | 'signup') => void;
   authSuccessCallback: (() => void) | null;
 
   // Selected property for viewing
@@ -105,10 +106,12 @@ export const FavoritesAndAlertsProvider: React.FC<{
   // Auth modal trigger state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalPrompt, setAuthModalPrompt] = useState<string>('');
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [authSuccessCallback, setAuthSuccessCallback] = useState<(() => void) | null>(null);
 
-  const openAuthModal = (prompt?: string, onSuccess?: () => void) => {
+  const openAuthModal = (prompt?: string, onSuccess?: () => void, mode?: 'login' | 'signup') => {
     setAuthModalPrompt(prompt || '');
+    setAuthModalMode(mode || 'login');
     if (onSuccess) {
       setAuthSuccessCallback(() => onSuccess);
     } else {
@@ -429,6 +432,7 @@ export const FavoritesAndAlertsProvider: React.FC<{
         isAuthModalOpen,
         setIsAuthModalOpen,
         authModalPrompt,
+        authModalMode,
         openAuthModal,
         authSuccessCallback,
         inspectProperty,

@@ -51,6 +51,8 @@ export interface Property {
   createdAt: string;
   updatedAt: string;
   publishedBy?: string;
+  partnerCompanyName?: string;
+  partnerId?: string;
 }
 
 export interface Category {

@@ -18,10 +18,13 @@ import {
   ChevronRight,
   Heart,
   Bell,
+  Building2,
+  ExternalLink,
 } from 'lucide-react';
 import { Property } from '../types';
 import { useFavoritesAndAlerts } from '../context/FavoritesAndAlertsContext';
 import { formatCurrency } from '../lib/formatters';
+import { parseVideoSource } from '../lib/videoUtils';
 
 interface PropertyDetailModalProps {
   property: Property | null;
@@ -72,16 +75,29 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
     }
   };
 
+  const parsedVideo = parseVideoSource(property.videoUrl);
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-6 border border-slate-200 flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-2 sm:p-6 animate-in fade-in duration-200">
+      {/* Floating mobile close button (high priority touch, iOS safe area safe) */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="fixed top-[max(0.85rem,env(safe-area-inset-top,14px))] right-[max(0.85rem,env(safe-area-inset-right,14px))] sm:hidden z-[99999] min-w-[48px] min-h-[48px] p-3 rounded-full bg-slate-950/95 hover:bg-black active:scale-90 text-white border-2 border-white/40 shadow-2xl flex items-center justify-center cursor-pointer touch-manipulation"
+        aria-label="Fechar Janela"
+        title="Fechar"
+      >
+        <X className="w-5 h-5 text-white" />
+      </button>
+
+      <div className="relative w-full max-w-4xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-auto border border-slate-200 flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
         {/* Modal Top Bar */}
-        <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 sticky top-0 z-20">
+        <div className="px-4 sm:px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-white/95 sm:bg-slate-50/90 backdrop-blur-md sticky top-0 z-30 pt-[max(0.75rem,env(safe-area-inset-top,12px))]">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
               {propCode}
             </span>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider truncate max-w-[130px] sm:max-w-none">
               {property.dealType === 'venda'
                 ? 'Imóvel para Venda'
                 : property.dealType === 'arrendamento'
@@ -90,12 +106,12 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Favorite Toggle Button */}
             <button
               id="detail-modal-fav-btn"
               onClick={() => toggleFavorite(property)}
-              className={`p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+              className={`p-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all min-h-[40px] touch-manipulation ${
                 favorited
                   ? 'bg-rose-50 text-rose-600 border border-rose-200 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
@@ -114,16 +130,19 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
 
             <button
               onClick={handleShare}
-              className="p-2 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-200/60 transition-colors text-xs font-medium flex items-center gap-1"
+              className="p-2 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-200/60 transition-colors text-xs font-medium flex items-center gap-1 min-h-[40px] touch-manipulation"
               title="Partilhar link deste imóvel"
             >
               <Share2 className="w-4 h-4" />
               <span className="hidden sm:inline">{copied ? 'Copiado!' : 'Partilhar'}</span>
             </button>
+
+            {/* Header Close Button (Visible and high-priority on both mobile and desktop) */}
             <button
               onClick={onClose}
-              className="p-2 text-slate-500 hover:text-slate-900 rounded-full hover:bg-slate-200 transition-colors"
+              className="flex min-w-[40px] min-h-[40px] items-center justify-center text-slate-700 hover:text-slate-950 rounded-full hover:bg-slate-200/70 bg-slate-100 transition-all border border-slate-200 active:scale-95 touch-manipulation cursor-pointer"
               aria-label="Fechar"
+              title="Fechar"
             >
               <X className="w-5 h-5" />
             </button>
@@ -131,17 +150,17 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="overflow-y-auto p-5 sm:p-7 space-y-6 flex-1">
+        <div className="overflow-y-auto p-4 sm:p-7 space-y-6 flex-1">
           {/* Media Player / Carousel */}
           <div className="space-y-2">
             {/* Tabs for Photos / Video */}
             {property.hasVideo && (
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 sticky top-0 z-30 bg-white/95 backdrop-blur-xs py-1">
                 <button
                   onClick={() => setActiveMediaTab('photos')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation ${
                     activeMediaTab === 'photos'
-                      ? 'bg-slate-900 text-white'
+                      ? 'bg-slate-900 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -149,13 +168,13 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveMediaTab('video')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  className={`min-h-[42px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer touch-manipulation ${
                     activeMediaTab === 'video'
-                      ? 'bg-amber-500 text-slate-950 font-extrabold'
+                      ? 'bg-amber-500 text-slate-950 font-extrabold shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  <Video className="w-3.5 h-3.5" />
+                  <Video className="w-4 h-4 text-amber-900" />
                   Vídeo do Imóvel
                 </button>
               </div>
@@ -165,11 +184,11 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               <div className="space-y-3">
                 {/* Main Large Photo - 100% Uncropped Responsive Presentation */}
                 <div
-                  className="relative w-full min-h-[300px] h-[50vh] max-h-[560px] rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center select-none group border border-slate-800 shadow-inner cursor-zoom-in"
+                  className="relative w-full min-h-[260px] sm:min-h-[320px] h-[45vh] max-h-[560px] rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center select-none group border border-slate-800 shadow-inner cursor-zoom-in"
                   onClick={() => setIsFullscreenPhoto(true)}
                   title="Clique para visualizar em tela cheia"
                 >
-                  {/* Ambient Backdrop: smooth blur of the photo edges, eliminating harsh cutoffs */}
+                  {/* Ambient Backdrop */}
                   <img
                     src={images[activeImageIndex]}
                     alt=""
@@ -177,7 +196,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                     className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-30 scale-110 pointer-events-none"
                   />
 
-                  {/* Pristine Full Image: completely visible without cuts, respecting portrait/landscape ratio */}
+                  {/* Pristine Full Image */}
                   <img
                     src={images[activeImageIndex]}
                     alt={property.title}
@@ -191,7 +210,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                       e.stopPropagation();
                       setIsFullscreenPhoto(true);
                     }}
-                    className="absolute top-3 right-3 z-20 p-2 rounded-xl bg-slate-950/70 hover:bg-slate-900 text-white backdrop-blur-md border border-white/10 shadow-lg transition-all"
+                    className="absolute top-3 right-3 z-20 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-slate-950/75 hover:bg-slate-900 active:scale-95 text-white backdrop-blur-md border border-white/20 shadow-lg transition-all"
                     title="Ver em tela cheia"
                   >
                     <Maximize2 className="w-4 h-4 text-amber-400" />
@@ -209,7 +228,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                           e.stopPropagation();
                           setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
                         }}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-950/75 text-white hover:bg-amber-500 hover:text-slate-950 transition-colors shadow-lg border border-white/10"
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 z-30 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-slate-950/80 text-white hover:bg-amber-500 hover:text-slate-950 active:scale-95 transition-all shadow-xl border border-white/20"
                         aria-label="Foto anterior"
                       >
                         <ChevronLeft className="w-5 h-5" />
@@ -219,7 +238,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                           e.stopPropagation();
                           setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
                         }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-950/75 text-white hover:bg-amber-500 hover:text-slate-950 transition-colors shadow-lg border border-white/10"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 z-30 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-slate-950/80 text-white hover:bg-amber-500 hover:text-slate-950 active:scale-95 transition-all shadow-xl border border-white/20"
                         aria-label="Próxima foto"
                       >
                         <ChevronRight className="w-5 h-5" />
@@ -230,7 +249,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
 
                 {/* Thumbnails strip */}
                 {images.length > 1 && (
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 scrollbar-thin">
                     {images.map((img, idx) => (
                       <button
                         key={idx}
@@ -248,18 +267,37 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                 )}
               </div>
             ) : (
-              /* Video player */
-              <div className="aspect-16/9 rounded-2xl overflow-hidden bg-black flex items-center justify-center">
-                {property.videoUrl ? (
+              /* Enhanced Universal Video player (YouTube, Vimeo, MP4) */
+              <div className="relative aspect-16/9 w-full rounded-2xl overflow-hidden bg-black flex items-center justify-center shadow-inner border border-slate-800">
+                {parsedVideo.type === 'youtube' && parsedVideo.embedUrl ? (
+                  <iframe
+                    src={parsedVideo.embedUrl}
+                    title={`Vídeo: ${property.title}`}
+                    className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                ) : parsedVideo.type === 'vimeo' && parsedVideo.embedUrl ? (
+                  <iframe
+                    src={parsedVideo.embedUrl}
+                    title={`Vídeo: ${property.title}`}
+                    className="w-full h-full border-0"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : parsedVideo.type === 'direct' && parsedVideo.directUrl ? (
                   <video
-                    src={property.videoUrl}
+                    src={parsedVideo.directUrl}
                     controls
-                    autoPlay
                     playsInline
+                    preload="metadata"
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <p className="text-slate-400 text-sm">Vídeo indisponível.</p>
+                  <div className="text-center p-6 text-slate-400">
+                    <Video className="w-8 h-8 text-slate-500 mx-auto mb-2 opacity-60" />
+                    <p className="text-sm font-medium">Vídeo indisponível ou link inválido.</p>
+                  </div>
                 )}
               </div>
             )}
@@ -281,6 +319,15 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               <h2 className="font-brand-display text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
                 {property.title}
               </h2>
+
+              {/* Partner Company Identification (Requisito B12) */}
+              {property.partnerCompanyName && (
+                <div className="mt-2.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold shadow-2xs">
+                  <Building2 className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Imóvel Angariado por Parceiro: <strong className="text-amber-950 font-black">{property.partnerCompanyName}</strong></span>
+                  <span className="text-[10px] bg-amber-200/90 text-amber-900 px-1.5 py-0.5 rounded-md font-extrabold uppercase">Verificado B12</span>
+                </div>
+              )}
 
               {property.addressReference && (
                 <p className="text-xs text-slate-500 mt-1">
@@ -437,8 +484,8 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Sticky Action Footer */}
-        <div className="p-4 sm:p-5 bg-slate-900 text-white border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 sticky bottom-0 z-20">
+        {/* Sticky Action Footer with Safe Area Support for iPhone and Android touchscreens */}
+        <div className="p-4 sm:p-5 pb-[max(1rem,env(safe-area-inset-bottom,16px))] bg-slate-900 text-white border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 sticky bottom-0 z-30 shadow-2xl">
           <div className="hidden sm:block">
             <p className="text-xs text-slate-400">Interessado neste imóvel? Telefone: <span className="font-mono text-white">{agencyPhone}</span></p>
             <p className="text-sm font-bold text-blue-300">Entre em contacto com os nossos consultores</p>
@@ -450,7 +497,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               href={`https://wa.me/${cleanWhatsapp}?text=${whatsappMessage}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs uppercase tracking-wider py-3 px-5 rounded-xl transition-all shadow-md"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs uppercase tracking-wider py-3.5 px-5 rounded-xl transition-all shadow-md touch-manipulation min-h-[46px]"
             >
               <MessageCircle className="w-4 h-4" />
               <span>Fale Connosco</span>
@@ -459,7 +506,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
             {/* Normal Phone Call - Clean Essential Label */}
             <a
               href={`tel:${agencyPhone}`}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-[#0052A5] hover:bg-[#003366] active:scale-95 text-white font-bold text-xs py-3 px-5 rounded-xl transition-all shadow-md"
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-[#0052A5] hover:bg-[#003366] active:scale-95 text-white font-bold text-xs py-3.5 px-5 rounded-xl transition-all shadow-md touch-manipulation min-h-[46px]"
               title={`Ligar para ${agencyPhone}`}
             >
               <Phone className="w-4 h-4 text-white" />
@@ -472,7 +519,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
                 onClose();
                 onOpenLiveChatWithProperty(property);
               }}
-              className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-xs py-3 px-4 rounded-xl transition-all border border-white/20 shadow-sm"
+              className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-xs py-3.5 px-4 rounded-xl transition-all border border-white/20 shadow-sm touch-manipulation min-h-[46px]"
               title="Apoio e Atendimento no Site"
             >
               <Headphones className="w-4 h-4 text-blue-300" />
@@ -485,15 +532,16 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
       {/* Fullscreen High-Resolution Lightbox Modal */}
       {isFullscreenPhoto && (
         <div
-          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 select-none"
+          className="fixed inset-0 z-[100000] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 select-none"
           onClick={() => setIsFullscreenPhoto(false)}
         >
+          {/* Lightbox Safe-Area Notch-Resistant Close Button */}
           <button
             onClick={() => setIsFullscreenPhoto(false)}
-            className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-md transition-colors"
+            className="fixed top-[max(1rem,env(safe-area-inset-top,16px))] right-[max(1rem,env(safe-area-inset-right,16px))] z-[100001] min-w-[50px] min-h-[50px] p-3 rounded-full bg-white/20 hover:bg-white/30 active:scale-90 text-white backdrop-blur-md border border-white/30 shadow-2xl flex items-center justify-center touch-manipulation cursor-pointer"
             title="Fechar tela cheia"
           >
-            <X className="w-6 h-6" />
+            <X className="w-6 h-6 text-white" />
           </button>
 
           <div
@@ -510,14 +558,14 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               <>
                 <button
                   onClick={() => setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))}
-                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-amber-500 hover:text-slate-950 text-white transition-colors"
+                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-[100001] min-w-[50px] min-h-[50px] flex items-center justify-center rounded-full bg-black/75 hover:bg-amber-500 hover:text-slate-950 text-white transition-all border border-white/20 shadow-2xl touch-manipulation"
                   aria-label="Foto anterior"
                 >
                   <ChevronLeft className="w-6 h-6" />
                 </button>
                 <button
                   onClick={() => setActiveImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))}
-                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/60 hover:bg-amber-500 hover:text-slate-950 text-white transition-colors"
+                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-[100001] min-w-[50px] min-h-[50px] flex items-center justify-center rounded-full bg-black/75 hover:bg-amber-500 hover:text-slate-950 text-white transition-all border border-white/20 shadow-2xl touch-manipulation"
                   aria-label="Próxima foto"
                 >
                   <ChevronRight className="w-6 h-6" />
@@ -525,7 +573,7 @@ export const PropertyDetailModal: React.FC<PropertyDetailModalProps> = ({
               </>
             )}
 
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-black/75 text-white text-xs font-mono backdrop-blur-md border border-white/10">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-black/85 text-white text-xs font-mono backdrop-blur-md border border-white/20 shadow-lg">
               {activeImageIndex + 1} de {images.length} • {property.title}
             </div>
           </div>

@@ -352,18 +352,31 @@ export async function batchUploadPropertyPhotos(
 }
 
 /**
- * Gera um thumbnail instantâneo e URL seguro para preview de vídeos selecionados da galeria.
+ * Processa um vídeo da galeria com geração de thumbnail e conversão segura para base de dados.
+ * Otimizado para os limites de payload do Neon Tech Free Tier (evita congelamento de requisições HTTP).
  */
-export async function processVideoFile(file: File): Promise<{
+export async function processVideoFile(
+  file: File,
+  onProgress?: (info: UploadProgressInfo) => void
+): Promise<{
   objectUrl: string;
+  dataUrl?: string;
   thumbnailUrl: string;
   fileName: string;
   sizeMB: number;
+  recommendation?: string;
 }> {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Tempo limite excedido ao carregar o vídeo.'));
-    }, 25000);
+    const sizeMB = Number((file.size / (1024 * 1024)).toFixed(2));
+
+    if (onProgress) {
+      onProgress({
+        current: 1,
+        total: 4,
+        percent: 15,
+        message: 'A analisar estrutura e metadados do vídeo...',
+      });
+    }
 
     const objectUrl = URL.createObjectURL(file);
     const video = document.createElement('video');
@@ -372,13 +385,31 @@ export async function processVideoFile(file: File): Promise<{
     video.muted = true;
     video.playsInline = true;
 
+    const timeout = setTimeout(() => {
+      resolve({
+        objectUrl,
+        thumbnailUrl: '',
+        fileName: file.name,
+        sizeMB,
+        recommendation: 'Tempo limite excedido. Recomenda-se utilizar link do YouTube ou clipe mais curto.',
+      });
+    }, 25000);
+
     video.onerror = () => {
       clearTimeout(timeout);
-      reject(new Error('Não foi possível carregar o vídeo selecionado. Formato incompatível.'));
+      reject(new Error('Não foi possível ler o arquivo de vídeo. Utilize arquivos MP4, WebM ou MOV.'));
     };
 
     video.onloadeddata = () => {
-      video.currentTime = Math.min(0.5, video.duration / 2);
+      if (onProgress) {
+        onProgress({
+          current: 2,
+          total: 4,
+          percent: 50,
+          message: 'A gerar miniatura de capa em alta definição...',
+        });
+      }
+      video.currentTime = Math.min(0.5, (video.duration || 1) / 2);
     };
 
     video.onseeked = () => {
@@ -387,34 +418,79 @@ export async function processVideoFile(file: File): Promise<{
         canvas.width = Math.min(640, video.videoWidth || 640);
         canvas.height = Math.min(360, video.videoHeight || 360);
         const ctx = canvas.getContext('2d');
+        let thumbnailUrl = '';
         if (ctx) {
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.85);
+          thumbnailUrl = canvas.toDataURL('image/jpeg', 0.82);
+        }
+
+        if (onProgress) {
+          onProgress({
+            current: 3,
+            total: 4,
+            percent: 80,
+            message: 'A otimizar compressão e compatibilidade com a base de dados...',
+          });
+        }
+
+        // Limite seguro de payload SQL Neon: até 2.5MB
+        if (sizeMB <= 2.5) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            clearTimeout(timeout);
+            if (onProgress) {
+              onProgress({
+                current: 4,
+                total: 4,
+                percent: 100,
+                message: 'Vídeo otimizado com sucesso para a base de dados!',
+              });
+            }
+            resolve({
+              objectUrl,
+              dataUrl: reader.result as string,
+              thumbnailUrl,
+              fileName: file.name,
+              sizeMB,
+            });
+          };
+          reader.onerror = () => {
+            clearTimeout(timeout);
+            resolve({
+              objectUrl,
+              thumbnailUrl,
+              fileName: file.name,
+              sizeMB,
+            });
+          };
+          reader.readAsDataURL(file);
+        } else {
           clearTimeout(timeout);
+          if (onProgress) {
+            onProgress({
+              current: 4,
+              total: 4,
+              percent: 100,
+              message: 'Capa e metadados preparados com sucesso!',
+            });
+          }
           resolve({
             objectUrl,
             thumbnailUrl,
             fileName: file.name,
-            sizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
-          });
-        } else {
-          clearTimeout(timeout);
-          resolve({
-            objectUrl,
-            thumbnailUrl: '',
-            fileName: file.name,
-            sizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
+            sizeMB,
+            recommendation: `O arquivo tem ${sizeMB}MB. Para melhor velocidade na versão gratuita da Neon, cole o link do YouTube (ou envie clipe até 2.5MB).`,
           });
         }
-      } catch {
+      } catch (err) {
         clearTimeout(timeout);
         resolve({
           objectUrl,
           thumbnailUrl: '',
           fileName: file.name,
-          sizeMB: Number((file.size / (1024 * 1024)).toFixed(2)),
+          sizeMB,
         });
       }
     };

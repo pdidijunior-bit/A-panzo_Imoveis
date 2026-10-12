@@ -96,6 +96,8 @@ function mapRowToProperty(row: any): Property {
     hasVideo: Boolean(row.has_video),
     viewsCount: Number(row.views_count || 0),
     publishedBy: row.published_by ? String(row.published_by) : undefined,
+    partnerCompanyName: row.partner_company_name ? String(row.partner_company_name) : undefined,
+    partnerId: row.partner_id ? String(row.partner_id) : undefined,
     createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
     updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
   };
@@ -1019,6 +1021,7 @@ export const dbService = {
           is_negotiable, province, municipality, neighborhood, address_reference,
           area, bedrooms, bathrooms, parking_spaces, condition, status, is_featured,
           features, description, images, video_url, has_video, views_count, published_by,
+          partner_company_name, partner_id,
           created_at, updated_at
         ) VALUES (
           ${id},
@@ -1048,6 +1051,8 @@ export const dbService = {
           ${Boolean(property.hasVideo)},
           ${Number(property.viewsCount || 0)},
           ${property.publishedBy || 'A.PANZO Imobiliária'},
+          ${property.partnerCompanyName || null},
+          ${property.partnerId || null},
           ${createdAt},
           NOW()
         )
@@ -1078,6 +1083,8 @@ export const dbService = {
           has_video = EXCLUDED.has_video,
           views_count = EXCLUDED.views_count,
           published_by = EXCLUDED.published_by,
+          partner_company_name = EXCLUDED.partner_company_name,
+          partner_id = EXCLUDED.partner_id,
           updated_at = NOW()
       `;
 

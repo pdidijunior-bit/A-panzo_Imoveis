@@ -713,12 +713,13 @@ function MainContent({
 }
 
 function GlobalAuthModal() {
-  const { isAuthModalOpen, setIsAuthModalOpen, authModalPrompt, authSuccessCallback } = useFavoritesAndAlerts();
+  const { isAuthModalOpen, setIsAuthModalOpen, authModalPrompt, authModalMode, authSuccessCallback } = useFavoritesAndAlerts();
   return (
     <AuthModal
       isOpen={isAuthModalOpen}
       onClose={() => setIsAuthModalOpen(false)}
       promptText={authModalPrompt}
+      initialMode={authModalMode}
       onSuccess={() => {
         if (authSuccessCallback) authSuccessCallback();
       }}

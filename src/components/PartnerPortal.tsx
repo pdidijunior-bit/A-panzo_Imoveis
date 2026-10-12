@@ -23,11 +23,13 @@ import {
   Image as ImageIcon,
   Loader2,
   UploadCloud,
+  Video,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFavoritesAndAlerts } from '../context/FavoritesAndAlertsContext';
 import { Property, Category, LocationConfig, DealType, PropertyCondition } from '../types';
 import { dbService } from '../lib/dbService';
+import { processVideoFile } from '../lib/mediaUtils';
 import { formatKzPrice } from '../lib/formatters';
 import { COMMON_FEATURES_LIST } from '../lib/defaultData';
 import { sanitizeText, sanitizeNumber } from '../lib/sanitizer';
@@ -87,9 +89,13 @@ export const PartnerPortal: React.FC<PartnerPortalProps> = ({
   const [propDescription, setPropDescription] = useState('');
   const [propFeatures, setPropFeatures] = useState<string[]>([]);
   const [propImages, setPropImages] = useState<string[]>([]);
+  const [propVideoUrl, setPropVideoUrl] = useState('');
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false);
+  const [isProcessingVideo, setIsProcessingVideo] = useState(false);
   const [photoUploadProgress, setPhotoUploadProgress] = useState<string | null>(null);
+  const [videoProcessingProgress, setVideoProcessingProgress] = useState<string | null>(null);
   const [photoUploadPercent, setPhotoUploadPercent] = useState<number>(0);
+  const [videoProcessingPercent, setVideoProcessingPercent] = useState<number>(0);
   const [propSaveError, setPropSaveError] = useState<string | null>(null);
   const [isSavingProp, setIsSavingProp] = useState(false);
   const partnerFileInputRef = useRef<HTMLInputElement>(null);

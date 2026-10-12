@@ -30,6 +30,15 @@ import {
   EyeOff,
   ArrowLeft,
   Clock,
+  Briefcase,
+  Download,
+  Search,
+  FileSpreadsheet,
+  Check,
+  ExternalLink,
+  ArrowUpDown,
+  MessageCircle,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { dbService } from '../lib/dbService';
@@ -44,6 +53,7 @@ import {
   DealType,
   PropertyStatus,
   PropertyCondition,
+  PartnerProfile,
 } from '../types';
 import { COMMON_FEATURES_LIST } from '../lib/defaultData';
 import { formatCurrency, normalizeCurrency } from '../lib/formatters';
@@ -84,12 +94,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [masterKeyUpdateMsg, setMasterKeyUpdateMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [activeTab, setActiveTab] = useState<
-    'properties' | 'categories' | 'locations' | 'visuals' | 'messages' | 'institutional'
+    'properties' | 'categories' | 'locations' | 'visuals' | 'messages' | 'institutional' | 'partners'
   >('properties');
+
+  // Gestão de Parceiros B12 (Folha Excel Dinâmica)
+  const [partnersList, setPartnersList] = useState<PartnerProfile[]>([]);
+  const [isPartnersLoading, setIsPartnersLoading] = useState(false);
+  const [partnerSearchTerm, setPartnerSearchTerm] = useState('');
+  const [partnerStatusFilter, setPartnerStatusFilter] = useState<'all' | 'active' | 'pending' | 'suspended'>('all');
+  const [partnerProvinceFilter, setPartnerProvinceFilter] = useState('all');
+  const [partnerSortColumn, setPartnerSortColumn] = useState<'companyName' | 'nif' | 'province' | 'createdAt' | 'status'>('createdAt');
+  const [partnerSortDir, setPartnerSortDir] = useState<'asc' | 'desc'>('desc');
+  const [partnerActionNotice, setPartnerActionNotice] = useState<string | null>(null);
 
   // Property Form Modal State
   const [propertyModalOpen, setPropertyModalOpen] = useState(false);
   const [editingPropertyId, setEditingPropertyId] = useState<string | null>(null);
+  const [propPartnerCompanyName, setPropPartnerCompanyName] = useState('');
 
   // Property Form fields
   const [propTitle, setPropTitle] = useState('');
@@ -205,6 +226,141 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     return () => unsub();
   }, [selectedConversation]);
 
+  // Carregamento e Gestão de Parceiros B12 (Área de Administração)
+  const loadPartnersList = async () => {
+    setIsPartnersLoading(true);
+    try {
+      const data = await dbService.getPartnerProfiles();
+      setPartnersList(data || []);
+    } catch (err) {
+      console.warn('Erro ao carregar parceiros no painel adm:', err);
+    } finally {
+      setIsPartnersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadPartnersList();
+    }
+  }, [isAdmin, activeTab]);
+
+  const handleUpdatePartnerStatus = async (id: string, newStatus: 'active' | 'pending' | 'suspended') => {
+    try {
+      await dbService.updatePartnerStatus(id, newStatus);
+      setPartnersList((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, status: newStatus, updatedAt: new Date().toISOString() } : p))
+      );
+      setPartnerActionNotice(`Estado atualizado para "${newStatus === 'active' ? 'Activo' : newStatus === 'pending' ? 'Pendente' : 'Suspenso'}".`);
+      setTimeout(() => setPartnerActionNotice(null), 3500);
+    } catch (err: any) {
+      alert('Falha ao atualizar estado: ' + err.message);
+    }
+  };
+
+  // Contagem de imóveis por parceiro
+  const getPartnerPropertyCount = (partner: PartnerProfile) => {
+    return properties.filter(
+      (p) =>
+        p.publishedBy === partner.userId ||
+        p.publishedBy === partner.id ||
+        p.partnerId === partner.id ||
+        (p.partnerCompanyName && p.partnerCompanyName.toLowerCase() === partner.companyName.toLowerCase())
+    ).length;
+  };
+
+  // Filtragem e ordenação dinâmica estilo Excel
+  const filteredSortedPartners = useMemo(() => {
+    let list = [...partnersList];
+
+    if (partnerSearchTerm.trim()) {
+      const q = partnerSearchTerm.toLowerCase();
+      list = list.filter((p) =>
+        (p.companyName || '').toLowerCase().includes(q) ||
+        (p.nif || '').toLowerCase().includes(q) ||
+        (p.technicalResponsible || '').toLowerCase().includes(q) ||
+        (p.email || '').toLowerCase().includes(q) ||
+        (p.phone || '').toLowerCase().includes(q) ||
+        (p.municipality || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (partnerStatusFilter !== 'all') {
+      list = list.filter((p) => p.status === partnerStatusFilter);
+    }
+
+    if (partnerProvinceFilter !== 'all') {
+      list = list.filter((p) => (p.province || '').toLowerCase() === partnerProvinceFilter.toLowerCase());
+    }
+
+    list.sort((a, b) => {
+      let valA: any = a[partnerSortColumn] || '';
+      let valB: any = b[partnerSortColumn] || '';
+
+      if (partnerSortColumn === 'createdAt') {
+        valA = new Date(a.createdAt || 0).getTime();
+        valB = new Date(b.createdAt || 0).getTime();
+      } else {
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+      }
+
+      if (valA < valB) return partnerSortDir === 'asc' ? -1 : 1;
+      if (valA > valB) return partnerSortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return list;
+  }, [partnersList, partnerSearchTerm, partnerStatusFilter, partnerProvinceFilter, partnerSortColumn, partnerSortDir]);
+
+  const handleExportPartnersToCsv = () => {
+    if (filteredSortedPartners.length === 0) {
+      alert('Não existem registos de parceiros para exportar com os filtros atuais.');
+      return;
+    }
+
+    const headers = [
+      'Empresa / Parceiro',
+      'NIF',
+      'Responsável Técnico',
+      'E-mail',
+      'Telefone',
+      'Província',
+      'Município',
+      'Endereço',
+      'Documentos / Alvará',
+      'Estado',
+      'Imóveis Publicados',
+      'Data de Registo',
+    ];
+
+    const rows = filteredSortedPartners.map((p) => [
+      `"${(p.companyName || '').replace(/"/g, '""')}"`,
+      `"${(p.nif || '').replace(/"/g, '""')}"`,
+      `"${(p.technicalResponsible || '').replace(/"/g, '""')}"`,
+      `"${(p.email || '').replace(/"/g, '""')}"`,
+      `"${(p.phone || '').replace(/"/g, '""')}"`,
+      `"${(p.province || '').replace(/"/g, '""')}"`,
+      `"${(p.municipality || '').replace(/"/g, '""')}"`,
+      `"${(p.address || '').replace(/"/g, '""')}"`,
+      `"${(p.validationDocuments || '').replace(/"/g, '""')}"`,
+      `"${p.status === 'active' ? 'Activo' : p.status === 'pending' ? 'Pendente' : 'Suspenso'}"`,
+      `"${getPartnerPropertyCount(p)}"`,
+      `"${new Date(p.createdAt).toLocaleDateString('pt-AO')}"`,
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `APANZO_Parceiros_B12_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Auto-set first category and municipality if empty
   useEffect(() => {
     if (!propCategory && categories.length > 0) {
@@ -246,6 +402,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setPropIsFeatured(false);
     setPropImages([]);
     setPropVideoUrl('');
+    setPropPartnerCompanyName('');
     setFormError(null);
     setFormSuccess(null);
   };
@@ -279,6 +436,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setPropIsFeatured(prop.isFeatured || false);
     setPropImages(prop.images || []);
     setPropVideoUrl(prop.videoUrl || '');
+    setPropPartnerCompanyName(prop.partnerCompanyName || '');
     setFormError(null);
     setFormSuccess(null);
     setPropertyModalOpen(true);
@@ -413,6 +571,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         images: Array.isArray(propImages) ? propImages : [],
         videoUrl: propVideoUrl.trim() || null,
         hasVideo: Boolean(propVideoUrl.trim()),
+        partnerCompanyName: propPartnerCompanyName.trim() || undefined,
         viewsCount: editingPropertyId
           ? properties.find((p) => p.id === editingPropertyId)?.viewsCount || 0
           : 0,
@@ -873,7 +1032,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
           <button
             onClick={() => setActiveTab('institutional')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'institutional'
                 ? 'bg-amber-500 text-slate-950 shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -881,6 +1040,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           >
             <Info className="w-4 h-4" />
             <span>Sobre Nós & Contactos</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('partners')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'partners'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/60'
+            }`}
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+            <span>Gestão de Parceiros B12 ({partnersList.length})</span>
           </button>
         </div>
       </nav>
@@ -1879,6 +2050,384 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </div>
           </div>
         )}
+
+        {/* TAB 7: GESTÃO DE PARCEIROS B12 (TABELA EXCEL DINÂMICA) */}
+        {activeTab === 'partners' && (
+          <div className="space-y-6">
+            {/* Header & Excel Toolbar */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                    <FileSpreadsheet className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-brand-display text-xl font-bold text-slate-900">
+                        Gestão Dinâmica de Parceiros (Área B12)
+                      </h2>
+                      <span className="text-[11px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200 font-mono">
+                        Folha Excel Dinâmica
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Armazenamento e gestão em tempo real de todas as empresas e corretores cadastrados no portal B12 com sincronização direta na Neon Tech.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={loadPartnersList}
+                    disabled={isPartnersLoading}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                    title="Recarregar dados da base de dados"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isPartnersLoading ? 'animate-spin' : ''}`} />
+                    <span>Recarregar</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExportPartnersToCsv}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+                    title="Exportar folha para ficheiro compatível com Microsoft Excel e Google Sheets"
+                  >
+                    <Download className="w-4 h-4 text-emerald-200" />
+                    <span>Exportar Excel (.csv)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Action notice */}
+              {partnerActionNotice && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in duration-200">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-semibold">{partnerActionNotice}</span>
+                </div>
+              )}
+
+              {/* KPI Ribbon Summary (Estilo Folha de Indicadores Excel) */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Total Parceiros</span>
+                  <span className="text-xl font-black text-slate-900 font-mono mt-0.5 block">{partnersList.length}</span>
+                </div>
+                <div className="p-3.5 bg-emerald-50/70 rounded-xl border border-emerald-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">Activos</span>
+                  <span className="text-xl font-black text-emerald-900 font-mono mt-0.5 block">
+                    {partnersList.filter((p) => p.status === 'active').length}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-amber-50/70 rounded-xl border border-amber-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">Pendentes</span>
+                  <span className="text-xl font-black text-amber-900 font-mono mt-0.5 block">
+                    {partnersList.filter((p) => p.status === 'pending').length}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-rose-50/70 rounded-xl border border-rose-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block">Suspensos</span>
+                  <span className="text-xl font-black text-rose-900 font-mono mt-0.5 block">
+                    {partnersList.filter((p) => p.status === 'suspended').length}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-blue-50/70 rounded-xl border border-blue-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 block">Imóveis Vinculados</span>
+                  <span className="text-xl font-black text-blue-900 font-mono mt-0.5 block">
+                    {properties.filter((prop) => Boolean(prop.partnerCompanyName || prop.partnerId)).length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Dynamic Filter Toolbar */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2 border-t border-slate-100">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="text"
+                    value={partnerSearchTerm}
+                    onChange={(e) => setPartnerSearchTerm(e.target.value)}
+                    placeholder="Pesquisar por empresa, NIF, responsável, email ou telefone..."
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  />
+                  {partnerSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setPartnerSearchTerm('')}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={partnerStatusFilter}
+                    onChange={(e) => setPartnerStatusFilter(e.target.value as any)}
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="all">Todos os Estados</option>
+                    <option value="active">Activos</option>
+                    <option value="pending">Pendentes</option>
+                    <option value="suspended">Suspensos</option>
+                  </select>
+
+                  <select
+                    value={partnerProvinceFilter}
+                    onChange={(e) => setPartnerProvinceFilter(e.target.value)}
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="all">Todas as Províncias</option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.province}>
+                        {loc.province}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Dynamic Spreadsheet Table */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  {/* Table Header (Estilo Excel Ribbon) */}
+                  <thead>
+                    <tr className="bg-slate-100/90 border-b border-slate-300 text-slate-700 font-bold uppercase text-[10px] tracking-wider select-none">
+                      <th className="py-3 px-3 w-10 text-center border-r border-slate-200">#</th>
+                      <th
+                        className="py-3 px-4 border-r border-slate-200 cursor-pointer hover:bg-slate-200/80 transition-colors"
+                        onClick={() => {
+                          setPartnerSortColumn('companyName');
+                          setPartnerSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>Empresa / Parceiro</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
+                      <th
+                        className="py-3 px-3 border-r border-slate-200 cursor-pointer hover:bg-slate-200/80 transition-colors"
+                        onClick={() => {
+                          setPartnerSortColumn('nif');
+                          setPartnerSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>NIF</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
+                      <th className="py-3 px-4 border-r border-slate-200">Responsável Técnico</th>
+                      <th className="py-3 px-4 border-r border-slate-200">Contactos</th>
+                      <th
+                        className="py-3 px-3 border-r border-slate-200 cursor-pointer hover:bg-slate-200/80 transition-colors"
+                        onClick={() => {
+                          setPartnerSortColumn('province');
+                          setPartnerSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>Província / Mun.</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
+                      <th className="py-3 px-4 border-r border-slate-200">Documentos / Alvará</th>
+                      <th className="py-3 px-3 text-center border-r border-slate-200">Imóveis</th>
+                      <th
+                        className="py-3 px-3 border-r border-slate-200 cursor-pointer hover:bg-slate-200/80 transition-colors"
+                        onClick={() => {
+                          setPartnerSortColumn('status');
+                          setPartnerSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>Estado</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
+                      <th
+                        className="py-3 px-3 border-r border-slate-200 cursor-pointer hover:bg-slate-200/80 transition-colors"
+                        onClick={() => {
+                          setPartnerSortColumn('createdAt');
+                          setPartnerSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                        }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>Cadastro</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
+                      <th className="py-3 px-3 text-center">Ações</th>
+                    </tr>
+                  </thead>
+
+                  {/* Table Body */}
+                  <tbody className="divide-y divide-slate-200 font-sans">
+                    {filteredSortedPartners.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="py-12 text-center text-slate-400">
+                          <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                          <p className="text-sm font-bold text-slate-700">Nenhum parceiro encontrado</p>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {partnersList.length === 0
+                              ? 'Ainda não existem parceiros cadastrados via Área B12.'
+                              : 'Nenhum parceiro corresponde aos filtros de pesquisa aplicados.'}
+                          </p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredSortedPartners.map((partner, index) => {
+                        const propCount = getPartnerPropertyCount(partner);
+                        const cleanPhone = (partner.phone || '').replace(/[^0-9]/g, '');
+
+                        return (
+                          <tr
+                            key={partner.id}
+                            className="hover:bg-emerald-50/50 transition-colors group odd:bg-white even:bg-slate-50/60"
+                          >
+                            {/* Row Index */}
+                            <td className="py-3 px-3 text-center font-mono text-slate-400 border-r border-slate-200 text-[11px]">
+                              {index + 1}
+                            </td>
+
+                            {/* Empresa / Parceiro */}
+                            <td className="py-3 px-4 border-r border-slate-200">
+                              <div className="flex items-center gap-2">
+                                <Building className="w-4 h-4 text-emerald-700 shrink-0" />
+                                <span className="font-extrabold text-slate-900 group-hover:text-emerald-900">
+                                  {partner.companyName}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* NIF */}
+                            <td className="py-3 px-3 border-r border-slate-200 font-mono text-[11px] font-bold text-slate-700">
+                              {partner.nif || 'N/A'}
+                            </td>
+
+                            {/* Responsável Técnico */}
+                            <td className="py-3 px-4 border-r border-slate-200 text-slate-800">
+                              {partner.technicalResponsible || '—'}
+                            </td>
+
+                            {/* Contactos */}
+                            <td className="py-3 px-4 border-r border-slate-200 space-y-1">
+                              <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-700">
+                                <Phone className="w-3 h-3 text-[#0052A5] shrink-0" />
+                                <span>{partner.phone}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate max-w-[180px]">
+                                <span>{partner.email}</span>
+                              </div>
+                            </td>
+
+                            {/* Província / Município */}
+                            <td className="py-3 px-3 border-r border-slate-200 text-slate-700">
+                              <span className="font-bold">{partner.province || 'Luanda'}</span>
+                              {partner.municipality && (
+                                <span className="text-slate-500 block text-[10px]">{partner.municipality}</span>
+                              )}
+                            </td>
+
+                            {/* Documentos / Alvará */}
+                            <td className="py-3 px-4 border-r border-slate-200 text-[11px] text-slate-600 max-w-[200px] truncate" title={partner.validationDocuments}>
+                              {partner.validationDocuments || '—'}
+                            </td>
+
+                            {/* Imóveis Publicados */}
+                            <td className="py-3 px-3 text-center border-r border-slate-200">
+                              <span
+                                className={`inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full font-mono text-xs font-extrabold ${
+                                  propCount > 0
+                                    ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                                    : 'bg-slate-100 text-slate-400'
+                                }`}
+                              >
+                                {propCount}
+                              </span>
+                            </td>
+
+                            {/* Estado (Dropdown interactivo inline estilo Excel) */}
+                            <td className="py-3 px-3 border-r border-slate-200">
+                              <select
+                                value={partner.status}
+                                onChange={(e) => handleUpdatePartnerStatus(partner.id, e.target.value as any)}
+                                className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg border cursor-pointer focus:outline-hidden ${
+                                  partner.status === 'active'
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                    : partner.status === 'pending'
+                                    ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                    : 'bg-rose-50 text-rose-800 border-rose-300'
+                                }`}
+                              >
+                                <option value="active">Activo</option>
+                                <option value="pending">Pendente</option>
+                                <option value="suspended">Suspenso</option>
+                              </select>
+                            </td>
+
+                            {/* Data de Registo */}
+                            <td className="py-3 px-3 border-r border-slate-200 font-mono text-[10px] text-slate-500 whitespace-nowrap">
+                              {partner.createdAt ? new Date(partner.createdAt).toLocaleDateString('pt-AO') : '—'}
+                            </td>
+
+                            {/* Ações Rápidas */}
+                            <td className="py-3 px-3 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {cleanPhone && (
+                                  <a
+                                    href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Olá ${partner.companyName}, da A.PANZO Imobiliária sobre o vosso registo de parceiro B12.`)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors"
+                                    title="Contactar no WhatsApp"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+
+                                <a
+                                  href={`tel:${partner.phone}`}
+                                  className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-[#0052A5] transition-colors"
+                                  title="Ligar para o parceiro"
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+
+                  {/* Summary Footer Row */}
+                  <tfoot>
+                    <tr className="bg-slate-100 border-t-2 border-slate-300 text-slate-700 font-bold text-[11px]">
+                      <td colSpan={2} className="py-3 px-4 border-r border-slate-200">
+                        Total de Registos: {filteredSortedPartners.length} parceiros
+                      </td>
+                      <td colSpan={5} className="py-3 px-4 border-r border-slate-200 text-slate-500">
+                        Sincronização Neon Postgres ativa • Todos os cadastros da Área B12 são consolidados automaticamente nesta folha.
+                      </td>
+                      <td className="py-3 px-3 text-center border-r border-slate-200 font-mono text-emerald-900">
+                        {filteredSortedPartners.reduce((acc, p) => acc + getPartnerPropertyCount(p), 0)} imóveis
+                      </td>
+                      <td colSpan={3} className="py-3 px-3 text-right text-slate-500">
+                        Exportação disponível em formato .CSV
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Property Publish & Edit Modal */}
@@ -2227,32 +2776,105 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 )}
               </div>
 
+              {/* Partner Company Association (Área B12) */}
+              <div className="p-4 bg-amber-50/70 rounded-2xl border border-amber-200/90 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-amber-600 shrink-0" />
+                  <label className="text-xs font-bold uppercase text-amber-900">
+                    Vincular a Empresa Parceira (Área B12)
+                  </label>
+                  <span className="text-[10px] bg-amber-200/80 text-amber-900 font-extrabold px-1.5 py-0.5 rounded-md ml-auto">
+                    Opcional
+                  </span>
+                </div>
+                <p className="text-[11px] text-amber-800">
+                  Se este imóvel pertencer a um parceiro cadastrado, selecione abaixo para exibir a identificação pública da empresa no anúncio.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <select
+                    value={propPartnerCompanyName}
+                    onChange={(e) => setPropPartnerCompanyName(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs font-semibold text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value="">Nenhum (Imóvel Próprio A.PANZO)</option>
+                    {partnersList.map((p) => (
+                      <option key={p.id} value={p.companyName}>
+                        {p.companyName} ({p.province || 'Angola'} - NIF: {p.nif})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={propPartnerCompanyName}
+                    onChange={(e) => setPropPartnerCompanyName(e.target.value)}
+                    placeholder="Ou digite o nome da empresa parceira..."
+                    className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
               {/* Video from Device Gallery or Link */}
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <label className="font-bold uppercase text-slate-700 block">Vídeo Curto do Imóvel</label>
+                    <label className="font-bold uppercase text-slate-700 block text-xs">
+                      Vídeo do Imóvel (Neon Tech Otimizado)
+                    </label>
                     <p className="text-[11px] text-slate-500">
-                      Upload direto da galeria ou link de vídeo.
+                      Cole o link do YouTube / Vimeo ou envie um clipe curto da sua galeria.
                     </p>
                   </div>
 
-                  <label className="cursor-pointer bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-xs">
-                    <Video className="w-4 h-4" />
-                    <span>Upload Vídeo</span>
+                  <label className="cursor-pointer bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-xs text-xs">
+                    <Video className="w-4 h-4 text-amber-400" />
+                    <span>Upload da Galeria</span>
                     <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
                   </label>
                 </div>
 
+                {/* Progress bar during video processing */}
+                {isProcessingMedia && mediaUploadProgress && mediaUploadProgress.toLowerCase().includes('vídeo') && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 space-y-2">
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#0052A5]" />
+                        {mediaUploadProgress}
+                      </span>
+                      <span>{mediaUploadPercent}%</span>
+                    </div>
+                    <div className="w-full bg-blue-200/60 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-[#0052A5] h-full transition-all duration-300 rounded-full"
+                        style={{ width: `${mediaUploadPercent}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Video Link input for fast streaming without DB bloat */}
+                <div>
+                  <input
+                    type="url"
+                    value={propVideoUrl}
+                    onChange={(e) => setPropVideoUrl(e.target.value)}
+                    placeholder="Ex: https://www.youtube.com/watch?v=... ou link direto MP4"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 font-mono"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Dica Neon Free: Links do YouTube/Shorts/Vimeo não ocupam limite da base de dados e reproduzem instantaneamente para todos os visitantes.
+                  </p>
+                </div>
+
                 {propVideoUrl && (
-                  <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200">
-                    <span className="truncate max-w-xs font-mono text-slate-700 text-xs">
-                      Vídeo anexado com sucesso
+                  <div className="flex items-center justify-between p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                    <span className="truncate max-w-xs font-mono text-emerald-900 text-xs font-semibold flex items-center gap-1.5">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                      Vídeo configurado ({propVideoUrl.slice(0, 35)}...)
                     </span>
                     <button
                       type="button"
                       onClick={() => setPropVideoUrl('')}
-                      className="text-rose-600 font-semibold"
+                      className="text-rose-600 font-bold text-xs hover:underline cursor-pointer"
                     >
                       Remover Vídeo
                     </button>
